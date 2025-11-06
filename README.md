@@ -19,10 +19,7 @@ kb-admin/
 ├── src/
 │   ├── api/
 │   │   ├── client.ts                # Конфигурация API с токенами
-│   │   ├── kbClient.ts              # Базовый клиент для API запросов
-│   │   ├── knowledgeBasesService.ts # Сервис для Knowledge Bases
-│   │   ├── dataSourcesService.ts    # Сервис для Data Sources
-│   │   └── documentsService.ts      # Сервис для Documents
+│   │   └── kbClient.ts              # KnowledgeBaseClient из пакета
 │   ├── components/
 │   │   ├── Layout.tsx               # Общий layout с навигацией
 │   │   ├── KnowledgeBaseDialog.tsx
@@ -38,7 +35,7 @@ kb-admin/
 │   │   ├── DataSourcesPage.tsx
 │   │   └── DocumentsPage.tsx
 │   ├── types/
-│   │   └── index.ts                 # TypeScript типы
+│   │   └── index.ts                 # Re-export типов из клиента
 │   ├── App.tsx                      # Главный компонент с роутингом
 │   └── main.tsx                     # Точка входа
 ├── index.html
@@ -117,71 +114,82 @@ npm run preview
 
 ## Интеграция с @wildix/wim-knowledge-base-client
 
-Приложение готово к работе с реальным API! Интеграция разделена на слои:
+Приложение полностью интегрировано с официальным клиентом! ✅
 
-### Архитектура API
+### Архитектура
 
-1. **API Client** (`src/api/kbClient.ts`) - базовый HTTP клиент с поддержкой:
-   - Автоматическое добавление токена из localStorage
-   - Обработка ошибок
-   - Парсинг JSON ответов
+```
+UI Components (Pages)
+         ↓
+React Query Hooks
+         ↓
+@wildix/wim-knowledge-base-client
+         ↓
+Backend API
+```
 
-2. **Service Layer** - сервисы для каждой сущности:
-   - `src/api/knowledgeBasesService.ts` - CRUD операции для Knowledge Bases
-   - `src/api/dataSourcesService.ts` - CRUD операции для Data Sources
-   - `src/api/documentsService.ts` - CRUD операции для Documents
+**Типы** - импортируются напрямую из пакета:
+```typescript
+// src/types/index.ts
+export type {
+  KnowledgeBase,
+  DataSource,
+  Document,
+  CreateKnowledgeBaseRequest,
+  UpdateKnowledgeBaseRequest,
+  // ...
+} from '@wildix/wim-knowledge-base-client'
+```
 
-3. **React Query Hooks** - хуки используют сервисы:
-   - `src/hooks/useKnowledgeBases.ts`
-   - `src/hooks/useDataSources.ts`
-   - `src/hooks/useDocuments.ts`
-
-### REST API Endpoints
-
-Текущая реализация использует следующие эндпоинты:
-
-**Knowledge Bases:**
-- `GET /knowledge-bases` - получить все KB
-- `GET /knowledge-bases/:id` - получить KB по ID
-- `POST /knowledge-bases` - создать KB
-- `PATCH /knowledge-bases/:id` - обновить KB
-- `DELETE /knowledge-bases/:id` - удалить KB
-
-**Data Sources:**
-- `GET /data-sources?knowledgeBaseId=...` - получить все DS
-- `GET /data-sources/:id` - получить DS по ID
-- `POST /data-sources` - создать DS
-- `PATCH /data-sources/:id` - обновить DS
-- `DELETE /data-sources/:id` - удалить DS
-
-**Documents:**
-- `GET /documents?dataSourceId=...&knowledgeBaseId=...` - получить все документы
-- `GET /documents/:id` - получить документ по ID
-- `POST /documents` - создать документ
-- `PATCH /documents/:id` - обновить документ
-- `DELETE /documents/:id` - удалить документ
-
-### Переход на @wildix/wim-knowledge-base-client
-
-Если в пакете есть готовый SDK клиент, можно заменить текущую реализацию в `src/api/kbClient.ts`:
-
+**API Client** (`src/api/kbClient.ts`) - инициализация клиента:
 ```typescript
 import { KnowledgeBaseClient } from '@wildix/wim-knowledge-base-client'
 import { getApiConfig } from './client'
 
-export function createKBClient() {
-  const config = getApiConfig()
-
-  return new KnowledgeBaseClient({
-    baseUrl: config.baseURL,
-    headers: config.headers,
-  })
-}
-
-export const kbClient = createKBClient()
+export const kbClient = new KnowledgeBaseClient({
+  baseUrl: config.baseURL,
+  headers: config.headers, // включает Bearer token
+})
 ```
 
-Затем обновите сервисы для использования методов клиента вместо прямых fetch запросов.
+**React Query Hooks** - используют клиент напрямую:
+```typescript
+// src/hooks/useKnowledgeBases.ts
+import { kbClient } from '../api/kbClient'
+
+export const useKnowledgeBases = () => {
+  return useQuery({
+    queryKey: ['knowledgeBases'],
+    queryFn: () => kbClient.knowledgeBases.getAll(),
+  })
+}
+```
+
+### Методы клиента
+
+**Knowledge Bases:**
+- `kbClient.knowledgeBases.getAll()` - получить все KB
+- `kbClient.knowledgeBases.getById(id)` - получить KB по ID
+- `kbClient.knowledgeBases.create(data)` - создать KB
+- `kbClient.knowledgeBases.update(id, data)` - обновить KB
+- `kbClient.knowledgeBases.delete(id)` - удалить KB
+
+**Data Sources:**
+- `kbClient.dataSources.getAll()` - получить все DS
+- `kbClient.dataSources.getById(id)` - получить DS по ID
+- `kbClient.dataSources.getByKnowledgeBase(kbId)` - получить DS для KB
+- `kbClient.dataSources.create(data)` - создать DS
+- `kbClient.dataSources.update(id, data)` - обновить DS
+- `kbClient.dataSources.delete(id)` - удалить DS
+
+**Documents:**
+- `kbClient.documents.getAll()` - получить все документы
+- `kbClient.documents.getById(id)` - получить документ по ID
+- `kbClient.documents.getByDataSource(dsId)` - получить документы для DS
+- `kbClient.documents.getByKnowledgeBase(kbId)` - получить документы для KB
+- `kbClient.documents.create(data)` - создать документ
+- `kbClient.documents.update(id, data)` - обновить документ
+- `kbClient.documents.delete(id)` - удалить документ
 
 ## API клиент
 

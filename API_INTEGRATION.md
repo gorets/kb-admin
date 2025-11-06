@@ -1,47 +1,26 @@
 # API Integration Guide
 
-Руководство по интеграции с @wildix/wim-knowledge-base-client
+Руководство по использованию @wildix/wim-knowledge-base-client в приложении
 
-## Текущая архитектура
+## Архитектура
 
-### Слои приложения
+Приложение использует прямую интеграцию с официальным клиентом:
 
 ```
 UI Components (Pages)
          ↓
 React Query Hooks
          ↓
-Service Layer (API Services)
-         ↓
-HTTP Client (kbClient)
+@wildix/wim-knowledge-base-client
          ↓
 Backend API
 ```
 
-## API Client
+## Конфигурация
 
-### Базовый клиент (src/api/kbClient.ts)
+### API Client (src/api/client.ts)
 
-Базовый HTTP клиент с автоматической авторизацией:
-
-```typescript
-import { kbClient } from './api/kbClient'
-
-// Пример GET запроса
-const data = await kbClient.request<KnowledgeBase[]>('/knowledge-bases', {
-  method: 'GET',
-})
-
-// Пример POST запроса
-const newKB = await kbClient.request<KnowledgeBase>('/knowledge-bases', {
-  method: 'POST',
-  body: JSON.stringify({ name: 'My KB', description: 'Description' }),
-})
-```
-
-### Конфигурация (src/api/client.ts)
-
-Управление токеном и настройками API:
+Управление токеном и настройками:
 
 ```typescript
 import { setAuthToken, getAuthToken, removeAuthToken, getApiConfig } from './api/client'
@@ -52,7 +31,7 @@ setAuthToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...')
 // Получение токена
 const token = getAuthToken()
 
-// Проверка наличия токена
+// Проверка авторизации
 if (token) {
   // Пользователь авторизован
 }
@@ -65,50 +44,99 @@ const config = getApiConfig()
 console.log(config.headers) // { 'Content-Type': 'application/json', 'Authorization': 'Bearer ...' }
 ```
 
-## Service Layer
-
-### Knowledge Bases Service
+### Инициализация клиента (src/api/kbClient.ts)
 
 ```typescript
-import { knowledgeBasesService } from './api/knowledgeBasesService'
+import { KnowledgeBaseClient } from '@wildix/wim-knowledge-base-client'
+import { getApiConfig } from './client'
+
+function createKBClient() {
+  const config = getApiConfig()
+
+  return new KnowledgeBaseClient({
+    baseUrl: config.baseURL,
+    headers: config.headers, // автоматически включает токен
+  })
+}
+
+export const kbClient = createKBClient()
+```
+
+## Типы
+
+Все типы импортируются напрямую из пакета:
+
+```typescript
+// src/types/index.ts
+export type {
+  KnowledgeBase,
+  DataSource,
+  Document,
+  CreateKnowledgeBaseRequest,
+  UpdateKnowledgeBaseRequest,
+  CreateDataSourceRequest,
+  UpdateDataSourceRequest,
+  CreateDocumentRequest,
+  UpdateDocumentRequest,
+} from '@wildix/wim-knowledge-base-client'
+```
+
+Использование в компонентах:
+
+```typescript
+import type { KnowledgeBase, CreateKnowledgeBaseRequest } from '../types'
+
+const kb: KnowledgeBase = {
+  id: '1',
+  name: 'My KB',
+  description: 'Description',
+}
+```
+
+## Использование клиента напрямую
+
+### Knowledge Bases
+
+```typescript
+import { kbClient } from './api/kbClient'
 
 // Получить все Knowledge Bases
-const kbs = await knowledgeBasesService.getAll()
+const kbs = await kbClient.knowledgeBases.getAll()
 
 // Получить один KB по ID
-const kb = await knowledgeBasesService.getById('kb-id')
+const kb = await kbClient.knowledgeBases.getById('kb-id')
 
 // Создать новый KB
-const newKB = await knowledgeBasesService.create({
+const newKB = await kbClient.knowledgeBases.create({
   name: 'My Knowledge Base',
   description: 'Optional description',
 })
 
 // Обновить KB
-const updatedKB = await knowledgeBasesService.update('kb-id', {
+const updatedKB = await kbClient.knowledgeBases.update('kb-id', {
   name: 'Updated name',
 })
 
 // Удалить KB
-await knowledgeBasesService.delete('kb-id')
+await kbClient.knowledgeBases.delete('kb-id')
 ```
 
-### Data Sources Service
+### Data Sources
 
 ```typescript
-import { dataSourcesService } from './api/dataSourcesService'
+import { kbClient } from './api/kbClient'
 
 // Получить все Data Sources
-const allDS = await dataSourcesService.getAll()
+const allDS = await kbClient.dataSources.getAll()
 
 // Получить Data Sources для конкретного KB
-const kbDS = await dataSourcesService.getAll('kb-id')
+const kbDS = await kbClient.dataSources.getByKnowledgeBase('kb-id')
 
-// Альтернативный способ
-const kbDS2 = await dataSourcesService.getByKnowledgeBase('kb-id')
+// Получить один DS по ID
+const ds = await kbClient.dataSources.getById('ds-id')
 
 // Создать новый Data Source
-const newDS = await dataSourcesService.create({
+const newDS = await kbClient.dataSources.create({
   knowledgeBaseId: 'kb-id',
   name: 'My Data Source',
   type: 'file',
@@ -116,41 +144,54 @@ const newDS = await dataSourcesService.create({
 })
 
 // Обновить Data Source
-const updatedDS = await dataSourcesService.update('ds-id', {
+const updatedDS = await kbClient.dataSources.update('ds-id', {
   name: 'Updated name',
   config: { path: '/new/path' },
 })
+
+// Удалить Data Source
+await kbClient.dataSources.delete('ds-id')
 ```
 
-### Documents Service
+### Documents
 
 ```typescript
-import { documentsService } from './api/documentsService'
+import { kbClient } from './api/kbClient'
 
 // Получить все документы
-const allDocs = await documentsService.getAll()
+const allDocs = await kbClient.documents.getAll()
 
-// Фильтрация по Data Source
-const dsDocs = await documentsService.getAll('ds-id')
+// Получить документы для Data Source
+const dsDocs = await kbClient.documents.getByDataSource('ds-id')
 
-// Фильтрация по Knowledge Base и Data Source
-const filteredDocs = await documentsService.getAll('ds-id', 'kb-id')
+// Получить документы для Knowledge Base
+const kbDocs = await kbClient.documents.getByKnowledgeBase('kb-id')
 
-// Альтернативные методы
-const byDS = await documentsService.getByDataSource('ds-id')
-const byKB = await documentsService.getByKnowledgeBase('kb-id')
+// Получить один документ по ID
+const doc = await kbClient.documents.getById('doc-id')
 
 // Создать документ
-const newDoc = await documentsService.create({
+const newDoc = await kbClient.documents.create({
   knowledgeBaseId: 'kb-id',
   dataSourceId: 'ds-id',
   title: 'Document Title',
   content: 'Document content...',
   metadata: { tags: ['tag1', 'tag2'] },
 })
+
+// Обновить документ
+const updatedDoc = await kbClient.documents.update('doc-id', {
+  title: 'New Title',
+  content: 'New content',
+})
+
+// Удалить документ
+await kbClient.documents.delete('doc-id')
 ```
 
 ## React Query Hooks
+
+Хуки используют клиент напрямую для интеграции с React Query.
 
 ### useKnowledgeBases
 
@@ -229,6 +270,111 @@ function DocumentsList() {
 }
 ```
 
+## Реализация хуков
+
+### Knowledge Bases Hook
+
+```typescript
+// src/hooks/useKnowledgeBases.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { kbClient } from '../api/kbClient'
+import type {
+  CreateKnowledgeBaseRequest,
+  UpdateKnowledgeBaseRequest,
+} from '../types'
+
+export const useKnowledgeBases = () => {
+  return useQuery({
+    queryKey: ['knowledgeBases'],
+    queryFn: () => kbClient.knowledgeBases.getAll(),
+  })
+}
+
+export const useCreateKnowledgeBase = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateKnowledgeBaseRequest) =>
+      kbClient.knowledgeBases.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
+    },
+  })
+}
+```
+
+### Data Sources Hook
+
+```typescript
+// src/hooks/useDataSources.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { kbClient } from '../api/kbClient'
+import type {
+  CreateDataSourceRequest,
+  UpdateDataSourceRequest,
+} from '../types'
+
+export const useDataSources = (knowledgeBaseId?: string) => {
+  return useQuery({
+    queryKey: ['dataSources', knowledgeBaseId],
+    queryFn: () => knowledgeBaseId
+      ? kbClient.dataSources.getByKnowledgeBase(knowledgeBaseId)
+      : kbClient.dataSources.getAll(),
+  })
+}
+
+export const useCreateDataSource = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateDataSourceRequest) =>
+      kbClient.dataSources.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataSources'] })
+    },
+  })
+}
+```
+
+### Documents Hook
+
+```typescript
+// src/hooks/useDocuments.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { kbClient } from '../api/kbClient'
+import type {
+  CreateDocumentRequest,
+  UpdateDocumentRequest,
+} from '../types'
+
+export const useDocuments = (dataSourceId?: string, knowledgeBaseId?: string) => {
+  return useQuery({
+    queryKey: ['documents', dataSourceId, knowledgeBaseId],
+    queryFn: () => {
+      if (dataSourceId) {
+        return kbClient.documents.getByDataSource(dataSourceId)
+      } else if (knowledgeBaseId) {
+        return kbClient.documents.getByKnowledgeBase(knowledgeBaseId)
+      } else {
+        return kbClient.documents.getAll()
+      }
+    },
+  })
+}
+
+export const useCreateDocument = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateDocumentRequest) =>
+      kbClient.documents.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+```
+
 ## Обработка ошибок
 
 ### В компонентах
@@ -283,50 +429,29 @@ export const API_BASE_URL =
   'http://localhost:3000/api'
 ```
 
-## Переход на @wildix/wim-knowledge-base-client
-
-Если пакет предоставляет готовый SDK, обновите `src/api/kbClient.ts`:
-
-```typescript
-import { KnowledgeBaseClient } from '@wildix/wim-knowledge-base-client'
-import { getApiConfig } from './client'
-
-export function createKBClient() {
-  const config = getApiConfig()
-
-  // Инициализация клиента из пакета
-  return new KnowledgeBaseClient({
-    baseUrl: config.baseURL,
-    headers: config.headers,
-  })
-}
-
-export const kbClient = createKBClient()
-```
-
-Затем обновите сервисы:
-
-```typescript
-// src/api/knowledgeBasesService.ts
-import { kbClient } from './kbClient'
-
-export const knowledgeBasesService = {
-  async getAll() {
-    // Используйте методы клиента вместо request
-    return kbClient.knowledgeBases.list()
-  },
-
-  async create(data) {
-    return kbClient.knowledgeBases.create(data)
-  },
-
-  // и т.д.
-}
-```
-
 ## Тестирование
 
-### Mock для тестов
+### Mock клиента для тестов
+
+```typescript
+import { vi } from 'vitest'
+
+// Mock kbClient
+vi.mock('./api/kbClient', () => ({
+  kbClient: {
+    knowledgeBases: {
+      getAll: vi.fn(() => Promise.resolve([
+        { id: '1', name: 'Test KB', description: 'Test' },
+      ])),
+      create: vi.fn((data) => Promise.resolve({ id: '1', ...data })),
+      update: vi.fn((id, data) => Promise.resolve({ id, ...data })),
+      delete: vi.fn(() => Promise.resolve()),
+    },
+  },
+}))
+```
+
+### MSW для тестов API
 
 ```typescript
 import { rest } from 'msw'
@@ -349,9 +474,18 @@ afterAll(() => server.close())
 
 ## Best Practices
 
-1. **Всегда используйте React Query hooks** в компонентах, а не прямые вызовы сервисов
-2. **Обрабатывайте ошибки** на уровне компонентов
-3. **Используйте loading states** для лучшего UX
-4. **Инвалидируйте кэш** после мутаций (уже настроено)
-5. **Храните токен в localStorage** только для demo/dev окружения
-6. **Для production** используйте httpOnly cookies
+1. **Используйте React Query hooks** в компонентах вместо прямых вызовов клиента
+2. **Импортируйте типы** из пакета, не создавайте свои
+3. **Обрабатывайте ошибки** на уровне компонентов
+4. **Используйте loading states** для лучшего UX
+5. **Кэш автоматически инвалидируется** после мутаций
+6. **Храните токен в localStorage** только для dev окружения
+7. **Для production** используйте httpOnly cookies
+
+## Преимущества текущей архитектуры
+
+✅ **Нет промежуточного слоя** - прямое использование клиента
+✅ **Типы из одного источника** - импорт из пакета
+✅ **Меньше кода** - нет дублирования сервисов
+✅ **Проще поддержка** - обновления пакета автоматически работают
+✅ **Type-safe** - полная типизация из коробки

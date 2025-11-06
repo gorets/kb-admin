@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { knowledgeBasesService } from '../api/knowledgeBasesService'
+import { kbClient } from '../api/kbClient'
 import type {
-  KnowledgeBase,
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
 } from '../types'
@@ -9,14 +8,14 @@ import type {
 export const useKnowledgeBases = () => {
   return useQuery({
     queryKey: ['knowledgeBases'],
-    queryFn: knowledgeBasesService.getAll,
+    queryFn: () => kbClient.knowledgeBases.getAll(),
   })
 }
 
 export const useKnowledgeBase = (id: string) => {
   return useQuery({
     queryKey: ['knowledgeBase', id],
-    queryFn: () => knowledgeBasesService.getById(id),
+    queryFn: () => kbClient.knowledgeBases.getById(id),
     enabled: !!id,
   })
 }
@@ -25,7 +24,7 @@ export const useCreateKnowledgeBase = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: knowledgeBasesService.create,
+    mutationFn: (data: CreateKnowledgeBaseRequest) => kbClient.knowledgeBases.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
     },
@@ -37,7 +36,7 @@ export const useUpdateKnowledgeBase = () => {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateKnowledgeBaseRequest }) =>
-      knowledgeBasesService.update(id, data),
+      kbClient.knowledgeBases.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
       queryClient.invalidateQueries({ queryKey: ['knowledgeBase', variables.id] })
@@ -49,7 +48,7 @@ export const useDeleteKnowledgeBase = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: knowledgeBasesService.delete,
+    mutationFn: (id: string) => kbClient.knowledgeBases.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
     },
