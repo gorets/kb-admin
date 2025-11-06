@@ -1,21 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { kbClient } from '../api/kbClient'
+import { kbClient } from '../api/client'
 import type {
   CreateDocumentRequest,
   UpdateDocumentRequest,
 } from '../types'
+import {
+  ListDocumentsCommand,
+  GetDocumentCommand,
+  CreateDocumentCommand,
+  UpdateDocumentCommand,
+  DeleteDocumentCommand,
+} from '@wildix/wim-knowledge-base-client'
 
 export const useDocuments = (dataSourceId?: string, knowledgeBaseId?: string) => {
   return useQuery({
     queryKey: ['documents', dataSourceId, knowledgeBaseId],
     queryFn: () => {
-      if (dataSourceId) {
-        return kbClient.documents.getByDataSource(dataSourceId)
-      } else if (knowledgeBaseId) {
-        return kbClient.documents.getByKnowledgeBase(knowledgeBaseId)
-      } else {
-        return kbClient.documents.getAll()
-      }
+      const params: any = {}
+      if (dataSourceId) params.dataSourceId = dataSourceId
+      if (knowledgeBaseId) params.knowledgeBaseId = knowledgeBaseId
+      return kbClient.send(new ListDocumentsCommand(params))
     },
   })
 }
@@ -23,7 +27,7 @@ export const useDocuments = (dataSourceId?: string, knowledgeBaseId?: string) =>
 export const useDocument = (id: string) => {
   return useQuery({
     queryKey: ['document', id],
-    queryFn: () => kbClient.documents.getById(id),
+    queryFn: () => kbClient.send(new GetDocumentCommand({ documentId: id })),
     enabled: !!id,
   })
 }
@@ -32,7 +36,8 @@ export const useCreateDocument = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: CreateDocumentRequest) => kbClient.documents.create(data),
+    mutationFn: (data: CreateDocumentRequest) =>
+      kbClient.send(new CreateDocumentCommand(data)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
@@ -44,7 +49,10 @@ export const useUpdateDocument = () => {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateDocumentRequest }) =>
-      kbClient.documents.update(id, data),
+      kbClient.send(new UpdateDocumentCommand({
+        documentId: id,
+        ...data,
+      })),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['document', variables.id] })
@@ -56,7 +64,8 @@ export const useDeleteDocument = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => kbClient.documents.delete(id),
+    mutationFn: (id: string) =>
+      kbClient.send(new DeleteDocumentCommand({ documentId: id })),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
