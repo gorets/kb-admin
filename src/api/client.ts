@@ -4,6 +4,20 @@
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 export const TOKEN_STORAGE_KEY = 'kb_admin_token'
 
+import { KnowledgeBaseClient } from '@wildix/wim-knowledge-base-client'
+
+const tokenProvider = {
+  token: () => {
+    const token = getAuthToken()
+    return token ? Promise.resolve(token) : Promise.resolve('')
+  },
+}
+
+export const kbClient = new KnowledgeBaseClient({
+  env: 'stage',
+  token: tokenProvider,
+});
+
 export interface ApiConfig {
   baseURL: string
   headers?: Record<string, string>
