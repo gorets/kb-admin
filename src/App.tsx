@@ -3,7 +3,6 @@ import { Box } from '@mui/material'
 import Layout from './components/Layout'
 import KnowledgeBasesPage from './pages/KnowledgeBasesPage'
 import DataSourcesPage from './pages/DataSourcesPage'
-import DocumentsPage from './pages/DocumentsPage'
 
 function App() {
   return (
@@ -14,7 +13,6 @@ function App() {
             <Route path="/" element={<Navigate to="/knowledge-bases" replace />} />
             <Route path="/knowledge-bases" element={<KnowledgeBasesPage />} />
             <Route path="/data-sources" element={<DataSourcesPage />} />
-            <Route path="/documents" element={<DocumentsPage />} />
           </Routes>
         </Layout>
       </Box>

@@ -2,19 +2,12 @@ import { useState } from 'react'
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  CardActions,
   Typography,
-  IconButton,
-  Grid,
   CircularProgress,
   Alert,
-  Chip,
+  Stack,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
 import {
   useDataSources,
   useCreateDataSource,
@@ -23,6 +16,7 @@ import {
 } from '../hooks/useDataSources'
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases'
 import DataSourceDialog from '../components/DataSourceDialog'
+import DataSourceCard from '../components/DataSourceCard'
 import type { DataSource } from '../types'
 
 export default function DataSourcesPage() {
@@ -102,49 +96,17 @@ export default function DataSourcesPage() {
           No data sources found. Create your first one to get started.
         </Alert>
       ) : (
-        <Grid container spacing={3}>
+        <Stack spacing={2}>
           {dataSources?.map((ds) => (
-            <Grid item xs={12} sm={6} md={4} key={ds.id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {ds.name}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                    <Chip label={ds.type} size="small" color="primary" />
-                    {ds.status && (
-                      <Chip label={ds.status} size="small" color="default" />
-                    )}
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    KB: {getKnowledgeBaseName(ds.knowledgeBaseId)}
-                  </Typography>
-                  {ds.createdAt && (
-                    <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                      Created: {new Date(ds.createdAt).toLocaleDateString()}
-                    </Typography>
-                  )}
-                </CardContent>
-                <CardActions>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEdit(ds)}
-                    color="primary"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(ds.id)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
+            <DataSourceCard
+              key={ds.id}
+              dataSource={ds}
+              knowledgeBaseName={getKnowledgeBaseName(ds.knowledgeBaseId)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           ))}
-        </Grid>
+        </Stack>
       )}
 
       <DataSourceDialog

@@ -15,7 +15,6 @@ import {
 import MenuIcon from '@mui/icons-material/Menu'
 import StorageIcon from '@mui/icons-material/Storage'
 import SourceIcon from '@mui/icons-material/Source'
-import DescriptionIcon from '@mui/icons-material/Description'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const drawerWidth = 240
@@ -27,7 +26,6 @@ interface LayoutProps {
 const menuItems = [
   { text: 'Knowledge Bases', icon: <StorageIcon />, path: '/knowledge-bases' },
   { text: 'Data Sources', icon: <SourceIcon />, path: '/data-sources' },
-  { text: 'Documents', icon: <DescriptionIcon />, path: '/documents' },
 ]
 
 export default function Layout({ children }: LayoutProps) {

@@ -13,13 +13,16 @@ import { useForm } from './useForm'
 import type { Document, CreateDocumentRequest } from '../types'
 import { useKnowledgeBases } from '../hooks/useKnowledgeBases'
 import { useDataSources } from '../hooks/useDataSources'
+import { useCreateDocument, useUpdateDocument } from '../hooks/useDocuments'
 
 interface DocumentDialogProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: CreateDocumentRequest) => void
+  onSubmit?: (data: CreateDocumentRequest) => void
   document?: Document | null
   loading?: boolean
+  preselectedDataSourceId?: string
+  preselectedKnowledgeBaseId?: string
 }
 
 export default function DocumentDialog({
@@ -28,19 +31,35 @@ export default function DocumentDialog({
   onSubmit,
   document,
   loading = false,
+  preselectedDataSourceId,
+  preselectedKnowledgeBaseId,
 }: DocumentDialogProps) {
   const { data: knowledgeBases } = useKnowledgeBases()
   const { data: dataSources } = useDataSources()
+  const createMutation = useCreateDocument()
+  const updateMutation = useUpdateDocument()
 
   const { values, errors, handleChange, handleSubmit, reset, setValues } = useForm<CreateDocumentRequest>(
     {
-      knowledgeBaseId: '',
-      dataSourceId: '',
+      knowledgeBaseId: preselectedKnowledgeBaseId || '',
+      dataSourceId: preselectedDataSourceId || '',
       title: '',
       content: '',
     },
-    (data) => {
-      onSubmit(data)
+    async (data) => {
+      try {
+        if (document) {
+          await updateMutation.mutateAsync({ id: document.id, data })
+        } else {
+          await createMutation.mutateAsync(data)
+        }
+        if (onSubmit) {
+          onSubmit(data)
+        }
+        onClose()
+      } catch (error) {
+        console.error('Error saving document:', error)
+      }
     }
   )
 
@@ -53,10 +72,15 @@ export default function DocumentDialog({
         content: document.content,
         metadata: document.metadata,
       })
-    } else {
-      reset()
+    } else if (open) {
+      setValues({
+        knowledgeBaseId: preselectedKnowledgeBaseId || '',
+        dataSourceId: preselectedDataSourceId || '',
+        title: '',
+        content: '',
+      })
     }
-  }, [document, reset, setValues])
+  }, [document, open, preselectedDataSourceId, preselectedKnowledgeBaseId, setValues])
 
   // Filter data sources by selected knowledge base
   const filteredDataSources = dataSources?.filter(
@@ -131,10 +155,17 @@ export default function DocumentDialog({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} disabled={loading}>
+          <Button
+            onClick={onClose}
+            disabled={loading || createMutation.isPending || updateMutation.isPending}
+          >
             Cancel
           </Button>
-          <Button type="submit" variant="contained" disabled={loading}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading || createMutation.isPending || updateMutation.isPending}
+          >
             {document ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
