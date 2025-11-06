@@ -18,25 +18,29 @@
 kb-admin/
 ├── src/
 │   ├── api/
-│   │   └── client.ts           # API клиент с поддержкой токенов
+│   │   ├── client.ts                # Конфигурация API с токенами
+│   │   ├── kbClient.ts              # Базовый клиент для API запросов
+│   │   ├── knowledgeBasesService.ts # Сервис для Knowledge Bases
+│   │   ├── dataSourcesService.ts    # Сервис для Data Sources
+│   │   └── documentsService.ts      # Сервис для Documents
 │   ├── components/
-│   │   ├── Layout.tsx           # Общий layout с навигацией
+│   │   ├── Layout.tsx               # Общий layout с навигацией
 │   │   ├── KnowledgeBaseDialog.tsx
 │   │   ├── DataSourceDialog.tsx
 │   │   ├── DocumentDialog.tsx
-│   │   └── useForm.ts          # Хук для работы с формами
+│   │   └── useForm.ts               # Хук для работы с формами
 │   ├── hooks/
-│   │   ├── useKnowledgeBases.ts # React Query hooks для KB
-│   │   ├── useDataSources.ts    # React Query hooks для DataSources
-│   │   └── useDocuments.ts      # React Query hooks для Documents
+│   │   ├── useKnowledgeBases.ts     # React Query hooks для KB
+│   │   ├── useDataSources.ts        # React Query hooks для DataSources
+│   │   └── useDocuments.ts          # React Query hooks для Documents
 │   ├── pages/
 │   │   ├── KnowledgeBasesPage.tsx
 │   │   ├── DataSourcesPage.tsx
 │   │   └── DocumentsPage.tsx
 │   ├── types/
-│   │   └── index.ts            # TypeScript типы
-│   ├── App.tsx                 # Главный компонент с роутингом
-│   └── main.tsx                # Точка входа
+│   │   └── index.ts                 # TypeScript типы
+│   ├── App.tsx                      # Главный компонент с роутингом
+│   └── main.tsx                     # Точка входа
 ├── index.html
 ├── package.json
 ├── tsconfig.json
@@ -113,20 +117,71 @@ npm run preview
 
 ## Интеграция с @wildix/wim-knowledge-base-client
 
-В файлах `src/hooks/use*.ts` находятся заглушки API вызовов. Необходимо заменить их на реальные вызовы клиента:
+Приложение готово к работе с реальным API! Интеграция разделена на слои:
+
+### Архитектура API
+
+1. **API Client** (`src/api/kbClient.ts`) - базовый HTTP клиент с поддержкой:
+   - Автоматическое добавление токена из localStorage
+   - Обработка ошибок
+   - Парсинг JSON ответов
+
+2. **Service Layer** - сервисы для каждой сущности:
+   - `src/api/knowledgeBasesService.ts` - CRUD операции для Knowledge Bases
+   - `src/api/dataSourcesService.ts` - CRUD операции для Data Sources
+   - `src/api/documentsService.ts` - CRUD операции для Documents
+
+3. **React Query Hooks** - хуки используют сервисы:
+   - `src/hooks/useKnowledgeBases.ts`
+   - `src/hooks/useDataSources.ts`
+   - `src/hooks/useDocuments.ts`
+
+### REST API Endpoints
+
+Текущая реализация использует следующие эндпоинты:
+
+**Knowledge Bases:**
+- `GET /knowledge-bases` - получить все KB
+- `GET /knowledge-bases/:id` - получить KB по ID
+- `POST /knowledge-bases` - создать KB
+- `PATCH /knowledge-bases/:id` - обновить KB
+- `DELETE /knowledge-bases/:id` - удалить KB
+
+**Data Sources:**
+- `GET /data-sources?knowledgeBaseId=...` - получить все DS
+- `GET /data-sources/:id` - получить DS по ID
+- `POST /data-sources` - создать DS
+- `PATCH /data-sources/:id` - обновить DS
+- `DELETE /data-sources/:id` - удалить DS
+
+**Documents:**
+- `GET /documents?dataSourceId=...&knowledgeBaseId=...` - получить все документы
+- `GET /documents/:id` - получить документ по ID
+- `POST /documents` - создать документ
+- `PATCH /documents/:id` - обновить документ
+- `DELETE /documents/:id` - удалить документ
+
+### Переход на @wildix/wim-knowledge-base-client
+
+Если в пакете есть готовый SDK клиент, можно заменить текущую реализацию в `src/api/kbClient.ts`:
 
 ```typescript
 import { KnowledgeBaseClient } from '@wildix/wim-knowledge-base-client'
-import { getApiConfig } from '../api/client'
+import { getApiConfig } from './client'
 
-const config = getApiConfig()
-const client = new KnowledgeBaseClient(config)
+export function createKBClient() {
+  const config = getApiConfig()
 
-// Пример использования
-const getAll = async (): Promise<KnowledgeBase[]> => {
-  return client.getKnowledgeBases()
+  return new KnowledgeBaseClient({
+    baseUrl: config.baseURL,
+    headers: config.headers,
+  })
 }
+
+export const kbClient = createKBClient()
 ```
+
+Затем обновите сервисы для использования методов клиента вместо прямых fetch запросов.
 
 ## API клиент
 
@@ -150,11 +205,15 @@ const token = getAuthToken()
 removeAuthToken()
 ```
 
-## TODO
+## Возможности для улучшения
 
-- [ ] Интегрировать реальный API клиент @wildix/wim-knowledge-base-client
-- [ ] Добавить страницу логина
-- [ ] Добавить фильтрацию и поиск
-- [ ] Добавить пагинацию
-- [ ] Добавить валидацию форм
-- [ ] Добавить тесты
+- [ ] Добавить страницу логина с формой авторизации
+- [ ] Добавить фильтрацию и поиск по сущностям
+- [ ] Добавить пагинацию для больших списков
+- [ ] Расширенная валидация форм
+- [ ] Добавить unit и integration тесты
+- [ ] Добавить обработку состояний загрузки с skeleton
+- [ ] Добавить toast уведомления об успехе/ошибке
+- [ ] Добавить подтверждающие диалоги для удаления
+- [ ] Экспорт/импорт данных
+- [ ] Dark mode toggle
