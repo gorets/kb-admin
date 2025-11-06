@@ -10,7 +10,9 @@ import {
   MenuItem,
   Typography,
   Divider,
-  Chip,
+  Alert,
+  FormControlLabel,
+  Switch,
 } from '@mui/material'
 import { useForm } from './useForm'
 import type { DataSource, CreateDataSourceRequest } from '../types'
@@ -88,13 +90,23 @@ export default function DataSourceDialog({
           setConfig({ files: { allowedExtensions: [] } })
           break
         case DataSourceType.CONFLUENCE:
-          setConfig({ confluence: { baseUrl: '', spaceKeys: [] } })
+          setConfig({
+            confluence: {
+              url: '',
+              username: '',
+              apiKey: '',
+              spaceId: '',
+              pages: { enabled: [], disabled: [] }
+            }
+          })
           break
         case DataSourceType.GDRIVE:
-          setConfig({ gdrive: { folderId: '' } })
-          break
-        case DataSourceType.PROXY:
-          setConfig({ proxy: { proxyUrl: '' } })
+          setConfig({
+            gdrive: {
+              nangoConnectionId: '',
+              folders: { enabled: [], disabled: [] }
+            }
+          })
           break
         default:
           setConfig({})
@@ -130,6 +142,7 @@ export default function DataSourceDialog({
               }}
               placeholder=".pdf, .txt, .docx"
               fullWidth
+              required
               helperText="Comma-separated list of allowed file extensions"
             />
           </>
@@ -139,38 +152,62 @@ export default function DataSourceDialog({
         return (
           <>
             <TextField
-              label="Base URL"
-              value={config.confluence?.baseUrl || ''}
-              onChange={(e) => handleConfigChange(['confluence', 'baseUrl'], e.target.value)}
-              placeholder="https://your-domain.atlassian.net/wiki"
+              label="Confluence URL"
+              value={config.confluence?.url || ''}
+              onChange={(e) => handleConfigChange(['confluence', 'url'], e.target.value)}
+              placeholder="https://your-domain.atlassian.net"
               fullWidth
-              helperText="Confluence instance base URL"
-            />
-            <TextField
-              label="Space Keys"
-              value={config.confluence?.spaceKeys?.join(', ') || ''}
-              onChange={(e) => {
-                const keys = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                handleConfigChange(['confluence', 'spaceKeys'], keys)
-              }}
-              placeholder="SPACE1, SPACE2"
-              fullWidth
-              helperText="Comma-separated list of Confluence space keys"
+              required
+              helperText="The URL of the Confluence instance"
             />
             <TextField
               label="Username"
               value={config.confluence?.username || ''}
               onChange={(e) => handleConfigChange(['confluence', 'username'], e.target.value)}
+              placeholder="user@example.com"
               fullWidth
-              helperText="Confluence username or email"
+              required
+              helperText="The username or email of the Confluence instance"
             />
             <TextField
-              label="API Token"
+              label="API Key"
               type="password"
-              value={config.confluence?.apiToken || ''}
-              onChange={(e) => handleConfigChange(['confluence', 'apiToken'], e.target.value)}
+              value={config.confluence?.apiKey || ''}
+              onChange={(e) => handleConfigChange(['confluence', 'apiKey'], e.target.value)}
               fullWidth
-              helperText="Confluence API token"
+              required
+              helperText="The API token of the Confluence instance"
+            />
+            <TextField
+              label="Space ID"
+              value={config.confluence?.spaceId || ''}
+              onChange={(e) => handleConfigChange(['confluence', 'spaceId'], e.target.value)}
+              placeholder="SPACE123"
+              fullWidth
+              required
+              helperText="The space ID of the Confluence instance"
+            />
+            <TextField
+              label="Enabled Pages"
+              value={config.confluence?.pages?.enabled?.join(', ') || ''}
+              onChange={(e) => {
+                const pages = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                handleConfigChange(['confluence', 'pages', 'enabled'], pages)
+              }}
+              placeholder="page1, page2, page3"
+              fullWidth
+              helperText="Comma-separated list of enabled page IDs"
+            />
+            <TextField
+              label="Disabled Pages"
+              value={config.confluence?.pages?.disabled?.join(', ') || ''}
+              onChange={(e) => {
+                const pages = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                handleConfigChange(['confluence', 'pages', 'disabled'], pages)
+              }}
+              placeholder="page4, page5"
+              fullWidth
+              helperText="Comma-separated list of disabled page IDs"
             />
           </>
         )
@@ -179,45 +216,44 @@ export default function DataSourceDialog({
         return (
           <>
             <TextField
-              label="Folder ID"
-              value={config.gdrive?.folderId || ''}
-              onChange={(e) => handleConfigChange(['gdrive', 'folderId'], e.target.value)}
-              placeholder="1a2b3c4d5e6f7g8h9i0j"
+              label="Nango Connection ID"
+              value={config.gdrive?.nangoConnectionId || ''}
+              onChange={(e) => handleConfigChange(['gdrive', 'nangoConnectionId'], e.target.value)}
+              placeholder="conn_123abc"
               fullWidth
-              helperText="Google Drive folder ID to sync"
+              required
+              helperText="The Nango connection ID of the GDrive instance"
             />
             <TextField
-              label="Service Account Email"
-              value={config.gdrive?.serviceAccountEmail || ''}
-              onChange={(e) => handleConfigChange(['gdrive', 'serviceAccountEmail'], e.target.value)}
-              placeholder="service-account@project.iam.gserviceaccount.com"
+              label="Enabled Folders"
+              value={config.gdrive?.folders?.enabled?.join(', ') || ''}
+              onChange={(e) => {
+                const folders = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                handleConfigChange(['gdrive', 'folders', 'enabled'], folders)
+              }}
+              placeholder="folder1, folder2"
               fullWidth
-              helperText="Service account email for authentication"
+              helperText="Comma-separated list of enabled folder IDs"
+            />
+            <TextField
+              label="Disabled Folders"
+              value={config.gdrive?.folders?.disabled?.join(', ') || ''}
+              onChange={(e) => {
+                const folders = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                handleConfigChange(['gdrive', 'folders', 'disabled'], folders)
+              }}
+              placeholder="folder3, folder4"
+              fullWidth
+              helperText="Comma-separated list of disabled folder IDs"
             />
           </>
         )
 
       case DataSourceType.PROXY:
         return (
-          <>
-            <TextField
-              label="Proxy URL"
-              value={config.proxy?.proxyUrl || ''}
-              onChange={(e) => handleConfigChange(['proxy', 'proxyUrl'], e.target.value)}
-              placeholder="https://proxy.example.com"
-              fullWidth
-              required
-              helperText="Proxy server URL"
-            />
-            <TextField
-              label="Target Domain"
-              value={config.proxy?.targetDomain || ''}
-              onChange={(e) => handleConfigChange(['proxy', 'targetDomain'], e.target.value)}
-              placeholder="example.com"
-              fullWidth
-              helperText="Target domain to proxy requests to"
-            />
-          </>
+          <Alert severity="info">
+            Proxy type configuration is not yet defined in the schema.
+          </Alert>
         )
 
       default:
@@ -279,6 +315,29 @@ export default function DataSourceDialog({
                 {renderTypeSpecificFields()}
               </>
             )}
+
+            {/* General configuration */}
+            <Divider sx={{ my: 1 }} />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={values.enabled ?? true}
+                  onChange={(e) => setValues({ ...values, enabled: e.target.checked })}
+                />
+              }
+              label="Enabled"
+            />
+
+            <TextField
+              name="syncSchedule"
+              label="Sync Schedule (Cron Expression)"
+              value={values.syncSchedule || ''}
+              onChange={handleChange}
+              placeholder="0 */6 * * *"
+              fullWidth
+              helperText="Optional: Cron expression for sync schedule (e.g., 0 */6 * * * for every 6 hours)"
+            />
           </Box>
         </DialogContent>
         <DialogActions>
