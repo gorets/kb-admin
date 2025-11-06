@@ -2,14 +2,17 @@ import { useState } from 'react'
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  CardActions,
   Typography,
   IconButton,
-  Grid,
   CircularProgress,
   Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -95,43 +98,57 @@ export default function KnowledgeBasesPage() {
           No knowledge bases found. Create your first one to get started.
         </Alert>
       ) : (
-        <Grid container spacing={3}>
-          {knowledgeBases?.map((kb) => (
-            <Grid item xs={12} sm={6} md={4} key={kb.id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {kb.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {kb.description || 'No description'}
-                  </Typography>
-                  {kb.createdAt && (
-                    <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                      Created: {new Date(kb.createdAt).toLocaleDateString()}
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell>Created</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {knowledgeBases?.map((kb) => (
+                <TableRow key={kb.id} hover>
+                  <TableCell>
+                    <Typography variant="body1" fontWeight="medium">
+                      {kb.name}
                     </Typography>
-                  )}
-                </CardContent>
-                <CardActions>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEdit(kb)}
-                    color="primary"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(kb.id)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {kb.description || 'No description'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {kb.createdAt && (
+                      <Typography variant="body2">
+                        {new Date(kb.createdAt).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEdit(kb)}
+                      color="primary"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(kb.id)}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       <KnowledgeBaseDialog

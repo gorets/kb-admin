@@ -5,9 +5,22 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Link,
+  IconButton,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteIcon from '@mui/icons-material/Delete'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import { useNavigate } from 'react-router-dom'
 import {
   useDataSources,
   useCreateDataSource,
@@ -15,12 +28,12 @@ import {
   useDeleteDataSource,
 } from '../hooks/useDataSources'
 import DataSourceDialog from '../components/DataSourceDialog'
-import DataSourceCard from '../components/DataSourceCard'
 import type { DataSource } from '../types'
 
 export default function DataSourcesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDS, setSelectedDS] = useState<DataSource | null>(null)
+  const navigate = useNavigate()
 
   const { data: dataSources, isLoading, error } = useDataSources()
   const createMutation = useCreateDataSource()
@@ -41,6 +54,10 @@ export default function DataSourcesPage() {
     if (window.confirm('Are you sure you want to delete this data source?')) {
       await deleteMutation.mutateAsync(id)
     }
+  }
+
+  const handleViewDetails = (id: string) => {
+    navigate(`/data-sources/${id}`)
   }
 
   const handleSubmit = async (data: any) => {
@@ -90,16 +107,77 @@ export default function DataSourcesPage() {
           No data sources found. Create your first one to get started.
         </Alert>
       ) : (
-        <Stack spacing={2}>
-          {dataSources?.map((ds) => (
-            <DataSourceCard
-              key={ds.id}
-              dataSource={ds}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </Stack>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Created</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {dataSources?.map((ds) => (
+                <TableRow key={ds.id} hover>
+                  <TableCell>
+                    <Link
+                      component="button"
+                      variant="body1"
+                      onClick={() => handleViewDetails(ds.id)}
+                      sx={{ fontWeight: 'medium', textAlign: 'left' }}
+                    >
+                      {ds.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={ds.type} size="small" color="primary" />
+                  </TableCell>
+                  <TableCell>
+                    {ds.enabled !== undefined && (
+                      <Chip
+                        label={ds.enabled ? 'Enabled' : 'Disabled'}
+                        size="small"
+                        color={ds.enabled ? 'success' : 'default'}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {ds.createdAt && (
+                      <Typography variant="body2">
+                        {new Date(ds.createdAt).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleViewDetails(ds.id)}
+                      color="primary"
+                    >
+                      <VisibilityIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEdit(ds)}
+                      color="primary"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(ds.id)}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       <DataSourceDialog
