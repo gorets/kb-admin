@@ -14,7 +14,6 @@ import {
   useUpdateDataSource,
   useDeleteDataSource,
 } from '../hooks/useDataSources'
-import { useKnowledgeBases } from '../hooks/useKnowledgeBases'
 import DataSourceDialog from '../components/DataSourceDialog'
 import DataSourceCard from '../components/DataSourceCard'
 import type { DataSource } from '../types'
@@ -24,7 +23,6 @@ export default function DataSourcesPage() {
   const [selectedDS, setSelectedDS] = useState<DataSource | null>(null)
 
   const { data: dataSources, isLoading, error } = useDataSources()
-  const { data: knowledgeBases } = useKnowledgeBases()
   const createMutation = useCreateDataSource()
   const updateMutation = useUpdateDataSource()
   const deleteMutation = useDeleteDataSource()
@@ -56,10 +54,6 @@ export default function DataSourcesPage() {
     } catch (error) {
       console.error('Error saving data source:', error)
     }
-  }
-
-  const getKnowledgeBaseName = (kbId: string) => {
-    return knowledgeBases?.find((kb) => kb.id === kbId)?.name || kbId
   }
 
   if (isLoading) {
@@ -101,7 +95,6 @@ export default function DataSourcesPage() {
             <DataSourceCard
               key={ds.id}
               dataSource={ds}
-              knowledgeBaseName={getKnowledgeBaseName(ds.knowledgeBaseId)}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />

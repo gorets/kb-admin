@@ -29,14 +29,12 @@ import DocumentDialog from './DocumentDialog'
 
 interface DataSourceCardProps {
   dataSource: DataSource
-  knowledgeBaseName: string
   onEdit: (ds: DataSource) => void
   onDelete: (id: string) => void
 }
 
 export default function DataSourceCard({
   dataSource,
-  knowledgeBaseName,
   onEdit,
   onDelete,
 }: DataSourceCardProps) {
@@ -65,7 +63,7 @@ export default function DataSourceCard({
 
   const handleDeleteDocument = async (docId: string) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
-      await deleteMutation.mutateAsync(docId)
+      await deleteMutation.mutateAsync({ documentId: docId, dataSourceId: dataSource.id })
     }
   }
 
@@ -80,13 +78,10 @@ export default function DataSourceCard({
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                 <Chip label={dataSource.type} size="small" color="primary" />
-                {dataSource.status && (
-                  <Chip label={dataSource.status} size="small" color="default" />
+                {dataSource.syncStatus && (
+                  <Chip label={dataSource.syncStatus} size="small" color="default" />
                 )}
               </Box>
-              <Typography variant="body2" color="text.secondary">
-                KB: {knowledgeBaseName}
-              </Typography>
               {dataSource.createdAt && (
                 <Typography variant="caption" color="text.secondary" display="block" mt={1}>
                   Created: {new Date(dataSource.createdAt).toLocaleDateString()}
@@ -219,7 +214,6 @@ export default function DataSourceCard({
         }}
         document={selectedDocument}
         preselectedDataSourceId={dataSource.id}
-        preselectedKnowledgeBaseId={dataSource.knowledgeBaseId}
       />
     </>
   )

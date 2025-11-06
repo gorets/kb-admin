@@ -12,19 +12,23 @@ import {
   DeleteDataSourceCommand,
 } from '@wildix/wim-knowledge-base-client'
 
-export const useDataSources = (knowledgeBaseId?: string) => {
+export const useDataSources = () => {
   return useQuery({
-    queryKey: ['dataSources', knowledgeBaseId],
-    queryFn: () => kbClient.send(new ListDataSourcesCommand(
-      knowledgeBaseId ? { knowledgeBaseId } : {}
-    )),
+    queryKey: ['dataSources'],
+    queryFn: async () => {
+      const response = await kbClient.send(new ListDataSourcesCommand({}))
+      return response.dataSources || []
+    },
   })
 }
 
 export const useDataSource = (id: string) => {
   return useQuery({
     queryKey: ['dataSource', id],
-    queryFn: () => kbClient.send(new GetDataSourceCommand({ dataSourceId: id })),
+    queryFn: async () => {
+      const response = await kbClient.send(new GetDataSourceCommand({ dataSourceId: id }));
+      return response.dataSource
+    },
     enabled: !!id,
   })
 }
@@ -33,8 +37,18 @@ export const useCreateDataSource = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: CreateDataSourceRequest) =>
-      kbClient.send(new CreateDataSourceCommand(data)),
+    mutationFn: async (data: CreateDataSourceRequest) => {
+      const response = await kbClient.send(new CreateDataSourceCommand({
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        config: data.config,
+        enabled: data.enabled ?? true,
+        syncSchedule: data.syncSchedule,
+      }))
+
+      return response.dataSource
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataSources'] })
     },
@@ -43,13 +57,19 @@ export const useCreateDataSource = () => {
 
 export const useUpdateDataSource = () => {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateDataSourceRequest }) =>
-      kbClient.send(new UpdateDataSourceCommand({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateDataSourceRequest }) => {
+      const response = await kbClient.send(new UpdateDataSourceCommand({
         dataSourceId: id,
-        ...data,
-      })),
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        config: data.config,
+        enabled: data.enabled,
+        syncSchedule: data.syncSchedule,
+      }))
+      return response.dataSource
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['dataSources'] })
       queryClient.invalidateQueries({ queryKey: ['dataSource', variables.id] })
@@ -61,8 +81,10 @@ export const useDeleteDataSource = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) =>
-      kbClient.send(new DeleteDataSourceCommand({ dataSourceId: id })),
+    mutationFn: async (id: string) => {
+      await kbClient.send(new DeleteDataSourceCommand({ dataSourceId: id }))
+      return id
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataSources'] })
     },

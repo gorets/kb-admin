@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { kbClient } from '../api/client'
-import type { UpdateKnowledgeBaseRequest } from '../types'
+import type { CreateKnowledgeBaseRequest, UpdateKnowledgeBaseRequest } from '../types'
 import {
   CreateKnowledgeBaseCommand,
   GetKnowledgeBaseCommand,
@@ -13,14 +13,20 @@ import {
 export const useKnowledgeBases = () => {
   return useQuery({
     queryKey: ['knowledgeBases'],
-    queryFn: () => kbClient.send(new ListKnowledgeBasesCommand({})),
+    queryFn: async () => {
+      const response = await kbClient.send(new ListKnowledgeBasesCommand({}))
+      return response.knowledgeBases
+    },
   })
 }
 
 export const useKnowledgeBase = (id: string) => {
   return useQuery({
     queryKey: ['knowledgeBase', id],
-    queryFn: () => kbClient.send(new GetKnowledgeBaseCommand({knowledgeBaseId: id})),
+    queryFn: async () => {
+      const response = await kbClient.send(new GetKnowledgeBaseCommand({knowledgeBaseId: id}))
+      return response.knowledgeBase
+    },
     enabled: !!id,
   })
 }
@@ -29,11 +35,14 @@ export const useCreateKnowledgeBase = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: { name: string; description: string }) => kbClient.send(new CreateKnowledgeBaseCommand({ 
-      name: data.name,
-      description: data.description,
-      dataSources: [],
-    })),
+    mutationFn: async (data: CreateKnowledgeBaseRequest) => {
+      const response = await kbClient.send(new CreateKnowledgeBaseCommand({ 
+        name: data.name,
+        description: data.description,
+        dataSources: data.dataSources || [],
+      }))
+      return response.knowledgeBase
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
     },
@@ -44,16 +53,18 @@ export const useUpdateKnowledgeBase = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateKnowledgeBaseRequest }) =>
-      kbClient.send(new UpdateKnowledgeBaseCommand({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateKnowledgeBaseRequest }) => {
+      const response = await kbClient.send(new UpdateKnowledgeBaseCommand({
         knowledgeBaseId: id,
         name: data.name || '',
         description: data.description || '',
-        dataSources: [],
-      })),
-    onSuccess: (_, variables) => {
+        dataSources: data.dataSources || [],
+      }))
+      return response.knowledgeBase
+    },
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
-      queryClient.invalidateQueries({ queryKey: ['knowledgeBase', variables.id] })
+      queryClient.invalidateQueries({ queryKey: ['knowledgeBase', id] })
     },
   })
 }
@@ -62,10 +73,13 @@ export const useDeleteKnowledgeBase = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) =>
-      kbClient.send(new DeleteKnowledgeBaseCommand({ knowledgeBaseId: id })),
-    onSuccess: () => {
+    mutationFn: async (id: string) => {
+      await kbClient.send(new DeleteKnowledgeBaseCommand({ knowledgeBaseId: id }))
+      return true
+    },
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledgeBase', id] })
     },
   })
 }

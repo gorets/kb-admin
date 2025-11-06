@@ -1,4 +1,4 @@
-import { useState, ChangeEvent, FormEvent } from 'react'
+import { useState, ChangeEvent, FormEvent, useCallback, useRef, useEffect } from 'react'
 
 export function useForm<T extends Record<string, any>>(
   initialValues: T,
@@ -6,19 +6,30 @@ export function useForm<T extends Record<string, any>>(
 ) {
   const [values, setValues] = useState<T>(initialValues)
   const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({})
+  const onSubmitRef = useRef(onSubmit)
 
-  const handleChange = (
+  // Update ref when onSubmit changes
+  useEffect(() => {
+    onSubmitRef.current = onSubmit
+  }, [onSubmit])
+
+  const handleChange = useCallback((
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target
-    setValues((prev) => ({ ...prev, [name]: value }))
+    setValues((prev: T) => ({ ...prev, [name]: value }))
     // Clear error when user starts typing
-    if (errors[name as keyof T]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }))
-    }
-  }
+    setErrors((prev: Partial<Record<keyof T, string>>) => {
+      if (prev[name as keyof T]) {
+        const newErrors = { ...prev }
+        delete newErrors[name as keyof T]
+        return newErrors
+      }
+      return prev
+    })
+  }, [])
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = useCallback((e: FormEvent) => {
     e.preventDefault()
     const newErrors: Partial<Record<keyof T, string>> = {}
 
@@ -35,13 +46,17 @@ export function useForm<T extends Record<string, any>>(
       return
     }
 
-    onSubmit(values)
-  }
+    onSubmitRef.current(values)
+  }, [values])
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setValues(initialValues)
     setErrors({})
-  }
+  }, [initialValues])
+
+  const setValuesDirect = useCallback((newValues: T) => {
+    setValues(newValues)
+  }, [])
 
   return {
     values,
@@ -49,6 +64,6 @@ export function useForm<T extends Record<string, any>>(
     handleChange,
     handleSubmit,
     reset,
-    setValues,
+    setValues: setValuesDirect,
   }
 }

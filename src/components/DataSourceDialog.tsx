@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useCallback } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -11,7 +11,7 @@ import {
 } from '@mui/material'
 import { useForm } from './useForm'
 import type { DataSource, CreateDataSourceRequest } from '../types'
-import { useKnowledgeBases } from '../hooks/useKnowledgeBases'
+import { DataSourceType } from '@wildix/wim-knowledge-base-client'
 
 interface DataSourceDialogProps {
   open: boolean
@@ -22,10 +22,10 @@ interface DataSourceDialogProps {
 }
 
 const dataSourceTypes = [
-  { value: 'file', label: 'File' },
-  { value: 'url', label: 'URL' },
-  { value: 'database', label: 'Database' },
-  { value: 'api', label: 'API' },
+  { value: DataSourceType.CONFLUENCE, label: 'Confluence' },
+  { value: DataSourceType.FILES, label: 'Files' },
+  { value: DataSourceType.GDRIVE, label: 'Google Drive' },
+  { value: DataSourceType.PROXY, label: 'Proxy' },
 ]
 
 export default function DataSourceDialog({
@@ -35,31 +35,41 @@ export default function DataSourceDialog({
   dataSource,
   loading = false,
 }: DataSourceDialogProps) {
-  const { data: knowledgeBases } = useKnowledgeBases()
+  const initialValues = useMemo<CreateDataSourceRequest>(() => ({
+    name: '',
+    description: '',
+    type: DataSourceType.FILES,
+    config: { files: { allowedExtensions: [] } },
+    enabled: true,
+    syncSchedule: undefined,
+  }), [])
+
+  const handleSubmitCallback = useCallback((data: CreateDataSourceRequest) => {
+    onSubmit(data)
+  }, [onSubmit])
 
   const { values, errors, handleChange, handleSubmit, reset, setValues } = useForm<CreateDataSourceRequest>(
-    {
-      knowledgeBaseId: '',
-      name: '',
-      type: 'file',
-    },
-    (data) => {
-      onSubmit(data)
-    }
+    initialValues,
+    handleSubmitCallback
   )
 
   useEffect(() => {
+    if (!open) return
+    
     if (dataSource) {
       setValues({
-        knowledgeBaseId: dataSource.knowledgeBaseId,
         name: dataSource.name,
-        type: dataSource.type,
-        config: dataSource.config,
+        description: dataSource.description || '',
+        type: dataSource.type || DataSourceType.FILES,
+        config: dataSource.config || { files: { allowedExtensions: [] } },
+        enabled: dataSource.enabled ?? true,
+        syncSchedule: dataSource.syncSchedule,
       })
     } else {
       reset()
     }
-  }, [dataSource, reset, setValues])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, dataSource?.id])
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -70,23 +80,6 @@ export default function DataSourceDialog({
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
-              select
-              name="knowledgeBaseId"
-              label="Knowledge Base"
-              value={values.knowledgeBaseId}
-              onChange={handleChange}
-              error={!!errors.knowledgeBaseId}
-              helperText={errors.knowledgeBaseId}
-              required
-              fullWidth
-            >
-              {knowledgeBases?.map((kb) => (
-                <MenuItem key={kb.id} value={kb.id}>
-                  {kb.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
               name="name"
               label="Name"
               value={values.name}
@@ -94,6 +87,16 @@ export default function DataSourceDialog({
               error={!!errors.name}
               helperText={errors.name}
               required
+              fullWidth
+              autoFocus
+            />
+            <TextField
+              name="description"
+              label="Description"
+              value={values.description || ''}
+              onChange={handleChange}
+              multiline
+              rows={3}
               fullWidth
             />
             <TextField
