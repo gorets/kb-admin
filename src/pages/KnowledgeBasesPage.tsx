@@ -104,6 +104,7 @@ export default function KnowledgeBasesPage() {
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Description</TableCell>
+                <TableCell>Data Sources</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -120,6 +121,13 @@ export default function KnowledgeBasesPage() {
                     <Typography variant="body2" color="text.secondary">
                       {kb.description || 'No description'}
                     </Typography>
+                  </TableCell>
+                  <TableCell>
+                    {kb.dataSources && kb.dataSources.length > 0 ? (
+                      <Typography variant="body2">{kb.dataSources.length}</Typography>
+                    ) : (
+                      <Typography variant="body2">No data sources</Typography>
+                    )}
                   </TableCell>
                   <TableCell>
                     {kb.createdAt && (

@@ -432,7 +432,7 @@ export default function DataSourceDialog({
             <TextField
               name="syncSchedule"
               label="Sync Schedule (Cron Expression)"
-              value={values.syncSchedule || ''}
+              value={values.syncSchedule || '0 */6 * * *'}
               onChange={handleChange}
               placeholder="0 */6 * * *"
               fullWidth
