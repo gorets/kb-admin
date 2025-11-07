@@ -15,7 +15,7 @@
     "@mui/icons-material": "^5.14.16",
     "@mui/material": "^5.14.17",
     "@tanstack/react-query": "^5.8.4",
-    "@wildix/wim-knowledge-base-client": "^0.0.8",
+    "@wildix/wim-knowledge-base-client": "^0.0.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.18.0"

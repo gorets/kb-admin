@@ -367,6 +367,24 @@ export default function DataSourceDialog({
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
+              select
+              name="type"
+              label="Type"
+              value={values.type}
+              onChange={handleChange}
+              required
+              fullWidth
+            >
+              {dataSourceTypes.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            
+            <Divider sx={{ my: 1 }} />
+
+            <TextField
               name="name"
               label="Name"
               value={values.name}
@@ -386,21 +404,6 @@ export default function DataSourceDialog({
               rows={3}
               fullWidth
             />
-            <TextField
-              select
-              name="type"
-              label="Type"
-              value={values.type}
-              onChange={handleChange}
-              required
-              fullWidth
-            >
-              {dataSourceTypes.map((type) => (
-                <MenuItem key={type.value} value={type.value}>
-                  {type.label}
-                </MenuItem>
-              ))}
-            </TextField>
 
             {/* Type-specific configuration fields */}
             {values.type && (

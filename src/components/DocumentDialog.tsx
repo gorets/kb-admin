@@ -48,7 +48,10 @@ export default function DocumentDialog({
   const handleSubmitCallback = useCallback(async (data: CreateDocumentRequest) => {
     try {
       if (document) {
-        await updateMutation.mutateAsync({ id: document.id, data })
+        await updateMutation.mutateAsync({ 
+          id: document.id, 
+          data: { ...data, documentId: document.id } 
+        })
       } else {
         await createMutation.mutateAsync(data)
       }
