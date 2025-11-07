@@ -17,28 +17,91 @@ import {
   IconButton,
   Grid,
   Divider,
+  Stack,
+  LinearProgress,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { useDataSource } from '../hooks/useDataSources'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import StopIcon from '@mui/icons-material/Stop'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import {
+  useDataSource,
+  useDeleteDataSource,
+  useUpdateDataSource,
+  useStartSyncDataSource,
+  useStopSyncDataSource,
+  useSyncStatus,
+} from '../hooks/useDataSources'
 import { useDocuments, useDeleteDocument } from '../hooks/useDocuments'
 import DocumentDialog from '../components/DocumentDialog'
-import type { Document as DocumentType } from '../types'
+import DataSourceDialog from '../components/DataSourceDialog'
+import type { Document as DocumentType, DataSource } from '../types'
 
 export default function DataSourceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null)
+  const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false)
+  const [syncPollingEnabled, setSyncPollingEnabled] = useState(false)
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
-  const deleteMutation = useDeleteDocument()
+  const { data: syncStatus } = useSyncStatus(id!, syncPollingEnabled)
+
+  const deleteDocumentMutation = useDeleteDocument()
+  const deleteDataSourceMutation = useDeleteDataSource()
+  const updateDataSourceMutation = useUpdateDataSource()
+  const startSyncMutation = useStartSyncDataSource()
+  const stopSyncMutation = useStopSyncDataSource()
 
   const handleBack = () => {
     navigate('/data-sources')
+  }
+
+  const handleEdit = () => {
+    setDataSourceDialogOpen(true)
+  }
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this data source? All associated documents will be lost.')) {
+      try {
+        await deleteDataSourceMutation.mutateAsync(id!)
+        navigate('/data-sources')
+      } catch (error) {
+        console.error('Error deleting data source:', error)
+      }
+    }
+  }
+
+  const handleUpdateDataSource = async (data: any) => {
+    try {
+      await updateDataSourceMutation.mutateAsync({ id: id!, data })
+      setDataSourceDialogOpen(false)
+    } catch (error) {
+      console.error('Error updating data source:', error)
+    }
+  }
+
+  const handleStartSync = async (syncType: 'full' | 'incremental') => {
+    try {
+      await startSyncMutation.mutateAsync({ dataSourceId: id!, syncType })
+      setSyncPollingEnabled(true)
+    } catch (error) {
+      console.error('Error starting sync:', error)
+    }
+  }
+
+  const handleStopSync = async () => {
+    try {
+      await stopSyncMutation.mutateAsync(id!)
+      setSyncPollingEnabled(false)
+    } catch (error) {
+      console.error('Error stopping sync:', error)
+    }
   }
 
   const handleAddDocument = () => {
@@ -53,8 +116,16 @@ export default function DataSourceDetailPage() {
 
   const handleDeleteDocument = async (docId: string) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
-      await deleteMutation.mutateAsync(docId)
+      await deleteDocumentMutation.mutateAsync(docId)
     }
+  }
+
+  // Check if sync is running and enable polling
+  const isSyncRunning = syncStatus?.status === 'running' || syncStatus?.status === 'pending'
+  if (isSyncRunning && !syncPollingEnabled) {
+    setSyncPollingEnabled(true)
+  } else if (!isSyncRunning && syncPollingEnabled) {
+    setSyncPollingEnabled(false)
   }
 
   if (isLoading) {
@@ -75,12 +146,124 @@ export default function DataSourceDetailPage() {
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <IconButton onClick={handleBack}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h4">Data Source Details</Typography>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
+        <Box display="flex" alignItems="center" gap={2}>
+          <IconButton onClick={handleBack}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h4">Data Source Details</Typography>
+        </Box>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={handleEdit}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={handleDelete}
+          >
+            Delete
+          </Button>
+        </Stack>
       </Box>
+
+      {/* Sync Status */}
+      {syncStatus && (
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Sync Status
+          </Typography>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Status
+              </Typography>
+              <Chip
+                label={syncStatus.status || 'idle'}
+                size="small"
+                color={
+                  syncStatus.status === 'running' ? 'primary' :
+                  syncStatus.status === 'completed' ? 'success' :
+                  syncStatus.status === 'failed' ? 'error' :
+                  'default'
+                }
+                sx={{ mt: 0.5 }}
+              />
+            </Grid>
+            {syncStatus.progress !== undefined && (
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Progress
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {syncStatus.progress}%
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={syncStatus.progress}
+                  sx={{ mt: 1 }}
+                />
+              </Grid>
+            )}
+            {syncStatus.lastSyncAt && (
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Last Sync
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {new Date(syncStatus.lastSyncAt).toLocaleString()}
+                </Typography>
+              </Grid>
+            )}
+            {syncStatus.error && (
+              <Grid item xs={12}>
+                <Alert severity="error" sx={{ mt: 1 }}>
+                  {syncStatus.error}
+                </Alert>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+      )}
+
+      {/* Sync Controls */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Sync Controls
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap">
+          <Button
+            variant="contained"
+            startIcon={<PlayArrowIcon />}
+            onClick={() => handleStartSync('full')}
+            disabled={isSyncRunning || startSyncMutation.isPending}
+          >
+            Start Full Sync
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<RefreshIcon />}
+            onClick={() => handleStartSync('incremental')}
+            disabled={isSyncRunning || startSyncMutation.isPending}
+          >
+            Start Incremental Sync
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<StopIcon />}
+            onClick={handleStopSync}
+            disabled={!isSyncRunning || stopSyncMutation.isPending}
+          >
+            Stop Sync
+          </Button>
+        </Stack>
+      </Paper>
 
       {/* Data Source Information */}
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -253,6 +436,14 @@ export default function DataSourceDetailPage() {
         onClose={() => setDocumentDialogOpen(false)}
         document={selectedDocument}
         preselectedDataSourceId={dataSource.id}
+      />
+
+      <DataSourceDialog
+        open={dataSourceDialogOpen}
+        onClose={() => setDataSourceDialogOpen(false)}
+        onSubmit={handleUpdateDataSource}
+        dataSource={dataSource}
+        loading={updateDataSourceMutation.isPending}
       />
     </Box>
   )
