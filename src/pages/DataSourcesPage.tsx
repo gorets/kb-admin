@@ -113,8 +113,9 @@ export default function DataSourcesPage() {
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Type</TableCell>
-                <TableCell>Status</TableCell>
+                <TableCell>Enabled</TableCell>
                 <TableCell>Sync Schedule</TableCell>
+                <TableCell>Sync Status</TableCell>
                 <TableCell>Created</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -149,6 +150,15 @@ export default function DataSourcesPage() {
                       <Typography variant="body2">
                         {ds.syncSchedule}
                       </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {ds.syncStatus !== undefined && (
+                      <Chip
+                        label={ds.syncStatus}
+                        size="small"
+                        color={ds.syncStatus === 'running' ? 'primary' : 'default'}
+                      />
                     )}
                   </TableCell>
                   <TableCell>
