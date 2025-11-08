@@ -49,6 +49,7 @@ export default function DataSourceDetailPage() {
   const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false)
   const [syncPollingEnabled, setSyncPollingEnabled] = useState(true) // Always fetch initially
   const [currentSyncStatus, setCurrentSyncStatus] = useState<SyncDataSourceStatus | null>(null) // Combined sync status state
+  const [lastSyncErrorMessage, setLastSyncErrorMessage] = useState<string | undefined>(undefined)
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
@@ -70,19 +71,24 @@ export default function DataSourceDetailPage() {
   // Update sync status from polling
   useEffect(() => {
     if (syncStatusFromPolling) {
-      setCurrentSyncStatus(syncStatusFromPolling)
+      setCurrentSyncStatus(syncStatusFromPolling.syncStatus)
+      setLastSyncErrorMessage(syncStatusFromPolling.syncErrorMessage)
+
+      if (syncStatusFromPolling.syncStatus !== SyncDataSourceStatus.RUNNING) {
+        setSyncPollingEnabled(false)
+      }
     }
   }, [syncStatusFromPolling])
 
   // Check sync status and manage polling
-  const isSyncRunning = currentSyncStatus?.status === SyncDataSourceStatus.RUNNING || currentSyncStatus?.status === SyncDataSourceStatus.PENDING
+  const isSyncRunning = currentSyncStatus === SyncDataSourceStatus.RUNNING;
 
   useEffect(() => {
     // Enable polling if sync is running, disable if not
     if (currentSyncStatus) {
       setSyncPollingEnabled(isSyncRunning)
     }
-  }, [currentSyncStatus?.status, isSyncRunning])
+  }, [currentSyncStatus, isSyncRunning])
 
   const handleBack = () => {
     navigate('/data-sources')
@@ -124,7 +130,7 @@ export default function DataSourceDetailPage() {
   const handleStopSync = async () => {
     try {
       await stopSyncMutation.mutateAsync(id!)
-      setSyncPollingEnabled(false)
+      // setSyncPollingEnabled(false)
     } catch (error) {
       console.error('Error stopping sync:', error)
     }
@@ -202,46 +208,21 @@ export default function DataSourceDetailPage() {
                 Status
               </Typography>
               <Chip
-                label={currentSyncStatus.status || 'idle'}
+                label={currentSyncStatus || 'idle'}
                 size="small"
                 color={
-                  currentSyncStatus.status === SyncDataSourceStatus.RUNNING ? 'primary' :
-                    currentSyncStatus.status === SyncDataSourceStatus.SUCCESS ? 'success' :
-                      currentSyncStatus.status === SyncDataSourceStatus.FAILED ? 'error' :
+                  currentSyncStatus === SyncDataSourceStatus.RUNNING ? 'primary' :
+                    currentSyncStatus === SyncDataSourceStatus.SUCCESS ? 'success' :
+                      currentSyncStatus === SyncDataSourceStatus.FAILED ? 'error' :
                   'default'
                 }
                 sx={{ mt: 0.5 }}
               />
             </Grid>
-            {currentSyncStatus.progress !== undefined && (
-              <Grid item xs={12} sm={6} md={3}>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Progress
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {currentSyncStatus.progress}%
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={currentSyncStatus.progress}
-                  sx={{ mt: 1 }}
-                />
-              </Grid>
-            )}
-            {currentSyncStatus.lastSyncAt && (
-              <Grid item xs={12} sm={6} md={3}>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Last Sync
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {new Date(currentSyncStatus.lastSyncAt).toLocaleString()}
-                </Typography>
-              </Grid>
-            )}
-            {currentSyncStatus.error && (
+            {lastSyncErrorMessage && (
               <Grid item xs={12}>
                 <Alert severity="error" sx={{ mt: 1 }}>
-                  {currentSyncStatus.error}
+                  {lastSyncErrorMessage}
                 </Alert>
               </Grid>
             )}

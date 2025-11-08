@@ -15,6 +15,7 @@ import {
   GetSyncStatusCommand,
   SyncDataSourceMode,
   SyncDataSourceStatus,
+  GetSyncStatusOutput,
 } from '@wildix/wim-knowledge-base-client'
 
 export const useDataSources = () => {
@@ -127,7 +128,7 @@ export const useSyncStatus = (dataSourceId: string, enabled: boolean = false) =>
       const response = await kbClient.send(new GetSyncStatusCommand({
         dataSourceId,
       }))
-      return response.syncStatus as SyncDataSourceStatus
+      return response as GetSyncStatusOutput
     },
     enabled: enabled && !!dataSourceId,
     refetchInterval: enabled ? 5000 : false, // Poll every 5 seconds when enabled
