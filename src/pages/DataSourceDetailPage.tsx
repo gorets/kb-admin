@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -46,7 +46,7 @@ export default function DataSourceDetailPage() {
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null)
   const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false)
-  const [syncPollingEnabled, setSyncPollingEnabled] = useState(false)
+  const [syncPollingEnabled, setSyncPollingEnabled] = useState(true) // Always fetch initially
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
@@ -120,13 +120,15 @@ export default function DataSourceDetailPage() {
     }
   }
 
-  // Check if sync is running and enable polling
+  // Check sync status and manage polling
   const isSyncRunning = syncStatus?.status === 'running' || syncStatus?.status === 'pending'
-  if (isSyncRunning && !syncPollingEnabled) {
-    setSyncPollingEnabled(true)
-  } else if (!isSyncRunning && syncPollingEnabled) {
-    setSyncPollingEnabled(false)
-  }
+
+  useEffect(() => {
+    // Enable polling if sync is running, disable if not
+    if (syncStatus) {
+      setSyncPollingEnabled(isSyncRunning)
+    }
+  }, [syncStatus?.status, isSyncRunning])
 
   if (isLoading) {
     return (

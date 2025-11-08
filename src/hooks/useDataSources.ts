@@ -128,6 +128,6 @@ export const useSyncStatus = (dataSourceId: string, enabled: boolean = false) =>
       return response.syncStatus
     },
     enabled: enabled && !!dataSourceId,
-    refetchInterval: enabled ? 2000 : false, // Poll every 2 seconds when enabled
+    refetchInterval: enabled ? 5000 : false, // Poll every 5 seconds when enabled
   })
 }
