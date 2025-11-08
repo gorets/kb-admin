@@ -48,16 +48,41 @@ export default function DataSourceDetailPage() {
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null)
   const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false)
   const [syncPollingEnabled, setSyncPollingEnabled] = useState(true) // Always fetch initially
+  const [currentSyncStatus, setCurrentSyncStatus] = useState<SyncDataSourceStatus | null>(null) // Combined sync status state
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
-  const { data: syncStatus } = useSyncStatus(id!, syncPollingEnabled)
+  const { data: syncStatusFromPolling } = useSyncStatus(id!, syncPollingEnabled)
 
   const deleteDocumentMutation = useDeleteDocument()
   const deleteDataSourceMutation = useDeleteDataSource()
   const updateDataSourceMutation = useUpdateDataSource()
   const startSyncMutation = useStartSyncDataSource()
   const stopSyncMutation = useStopSyncDataSource()
+
+  // Initialize sync status from dataSource on first load
+  useEffect(() => {
+    if (dataSource?.syncStatus && !currentSyncStatus) {
+      setCurrentSyncStatus(dataSource.syncStatus)
+    }
+  }, [dataSource?.syncStatus, currentSyncStatus])
+
+  // Update sync status from polling
+  useEffect(() => {
+    if (syncStatusFromPolling) {
+      setCurrentSyncStatus(syncStatusFromPolling)
+    }
+  }, [syncStatusFromPolling])
+
+  // Check sync status and manage polling
+  const isSyncRunning = currentSyncStatus?.status === SyncDataSourceStatus.RUNNING || currentSyncStatus?.status === SyncDataSourceStatus.PENDING
+
+  useEffect(() => {
+    // Enable polling if sync is running, disable if not
+    if (currentSyncStatus) {
+      setSyncPollingEnabled(isSyncRunning)
+    }
+  }, [currentSyncStatus?.status, isSyncRunning])
 
   const handleBack = () => {
     navigate('/data-sources')
@@ -121,16 +146,6 @@ export default function DataSourceDetailPage() {
     }
   }
 
-  // Check sync status and manage polling
-  const isSyncRunning = syncStatus?.status === 'running' || syncStatus?.status === 'pending'
-
-  useEffect(() => {
-    // Enable polling if sync is running, disable if not
-    if (syncStatus) {
-      setSyncPollingEnabled(isSyncRunning)
-    }
-  }, [syncStatus?.status, isSyncRunning])
-
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -176,7 +191,7 @@ export default function DataSourceDetailPage() {
       </Box>
 
       {/* Sync Status */}
-      {syncStatus && (
+      {currentSyncStatus && (
         <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             Sync Status
@@ -187,46 +202,46 @@ export default function DataSourceDetailPage() {
                 Status
               </Typography>
               <Chip
-                label={syncStatus.status || 'idle'}
+                label={currentSyncStatus.status || 'idle'}
                 size="small"
                 color={
-                  syncStatus.status === SyncDataSourceStatus.RUNNING ? 'primary' :
-                    syncStatus.status === SyncDataSourceStatus.SUCCESS ? 'success' :
-                      syncStatus.status === SyncDataSourceStatus.FAILED ? 'error' :
+                  currentSyncStatus.status === SyncDataSourceStatus.RUNNING ? 'primary' :
+                    currentSyncStatus.status === SyncDataSourceStatus.SUCCESS ? 'success' :
+                      currentSyncStatus.status === SyncDataSourceStatus.FAILED ? 'error' :
                   'default'
                 }
                 sx={{ mt: 0.5 }}
               />
             </Grid>
-            {syncStatus.progress !== undefined && (
+            {currentSyncStatus.progress !== undefined && (
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="caption" color="text.secondary" display="block">
                   Progress
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {syncStatus.progress}%
+                  {currentSyncStatus.progress}%
                 </Typography>
                 <LinearProgress
                   variant="determinate"
-                  value={syncStatus.progress}
+                  value={currentSyncStatus.progress}
                   sx={{ mt: 1 }}
                 />
               </Grid>
             )}
-            {syncStatus.lastSyncAt && (
+            {currentSyncStatus.lastSyncAt && (
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="caption" color="text.secondary" display="block">
                   Last Sync
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {new Date(syncStatus.lastSyncAt).toLocaleString()}
+                  {new Date(currentSyncStatus.lastSyncAt).toLocaleString()}
                 </Typography>
               </Grid>
             )}
-            {syncStatus.error && (
+            {currentSyncStatus.error && (
               <Grid item xs={12}>
                 <Alert severity="error" sx={{ mt: 1 }}>
-                  {syncStatus.error}
+                  {currentSyncStatus.error}
                 </Alert>
               </Grid>
             )}
@@ -243,7 +258,7 @@ export default function DataSourceDetailPage() {
           <Button
             variant="contained"
             startIcon={<PlayArrowIcon />}
-            onClick={() => handleStartSync('full')}
+            onClick={() => handleStartSync(SyncDataSourceMode.FULL)}
             disabled={isSyncRunning || startSyncMutation.isPending}
           >
             Start Full Sync
@@ -251,7 +266,7 @@ export default function DataSourceDetailPage() {
           <Button
             variant="contained"
             startIcon={<RefreshIcon />}
-            onClick={() => handleStartSync('incremental')}
+            onClick={() => handleStartSync(SyncDataSourceMode.INCREMENTAL)}
             disabled={isSyncRunning || startSyncMutation.isPending}
           >
             Start Incremental Sync
