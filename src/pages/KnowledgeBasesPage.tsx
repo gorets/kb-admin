@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Paper,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
@@ -29,6 +30,8 @@ import type { KnowledgeBase } from '../types'
 export default function KnowledgeBasesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedKB, setSelectedKB] = useState<KnowledgeBase | null>(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const { data: knowledgeBases, isLoading, error } = useKnowledgeBases()
   const createMutation = useCreateKnowledgeBase()
@@ -63,6 +66,20 @@ export default function KnowledgeBasesPage() {
       console.error('Error saving knowledge base:', error)
     }
   }
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  // Paginated data
+  const paginatedKnowledgeBases = knowledgeBases
+    ? knowledgeBases.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+    : []
 
   if (isLoading) {
     return (
@@ -110,7 +127,7 @@ export default function KnowledgeBasesPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {knowledgeBases?.map((kb) => (
+              {paginatedKnowledgeBases.map((kb) => (
                 <TableRow key={kb.id} hover>
                   <TableCell>
                     <Typography variant="body1" fontWeight="medium">
@@ -156,6 +173,15 @@ export default function KnowledgeBasesPage() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={knowledgeBases?.length || 0}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
         </TableContainer>
       )}
 

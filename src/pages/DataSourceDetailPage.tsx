@@ -14,6 +14,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   IconButton,
   Grid,
   Divider,
@@ -50,6 +51,8 @@ export default function DataSourceDetailPage() {
   const [syncPollingEnabled, setSyncPollingEnabled] = useState(true) // Always fetch initially
   const [currentSyncStatus, setCurrentSyncStatus] = useState<SyncDataSourceStatus | null>(null) // Combined sync status state
   const [lastSyncErrorMessage, setLastSyncErrorMessage] = useState<string | undefined>(undefined)
+  const [docsPage, setDocsPage] = useState(0)
+  const [docsRowsPerPage, setDocsRowsPerPage] = useState(10)
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
@@ -151,6 +154,20 @@ export default function DataSourceDetailPage() {
       await deleteDocumentMutation.mutateAsync({dataSourceId, documentId})
     }
   }
+
+  const handleDocsChangePage = (_event: unknown, newPage: number) => {
+    setDocsPage(newPage)
+  }
+
+  const handleDocsChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setDocsRowsPerPage(parseInt(event.target.value, 10))
+    setDocsPage(0)
+  }
+
+  // Paginated documents
+  const paginatedDocuments = documents
+    ? documents.slice(docsPage * docsRowsPerPage, docsPage * docsRowsPerPage + docsRowsPerPage)
+    : []
 
   if (isLoading) {
     return (
@@ -374,7 +391,7 @@ export default function DataSourceDetailPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {documents.map((doc) => (
+                {paginatedDocuments.map((doc) => (
                   <TableRow key={doc.id} hover>
                     <TableCell>
                       <Typography variant="body1" fontWeight="medium">
@@ -422,6 +439,15 @@ export default function DataSourceDetailPage() {
                 ))}
               </TableBody>
             </Table>
+            <TablePagination
+              component="div"
+              count={documents?.length || 0}
+              page={docsPage}
+              onPageChange={handleDocsChangePage}
+              rowsPerPage={docsRowsPerPage}
+              onRowsPerPageChange={handleDocsChangeRowsPerPage}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
           </TableContainer>
         ) : (
           <Alert severity="info">

@@ -11,6 +11,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Paper,
   Chip,
   Link,
@@ -33,6 +34,8 @@ import type { DataSource } from '../types'
 export default function DataSourcesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDS, setSelectedDS] = useState<DataSource | null>(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const navigate = useNavigate()
 
   const { data: dataSources, isLoading, error } = useDataSources()
@@ -72,6 +75,20 @@ export default function DataSourcesPage() {
       console.error('Error saving data source:', error)
     }
   }
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10))
+    setPage(0)
+  }
+
+  // Paginated data
+  const paginatedDataSources = dataSources
+    ? dataSources.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+    : []
 
   if (isLoading) {
     return (
@@ -121,7 +138,7 @@ export default function DataSourcesPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {dataSources?.map((ds) => (
+              {paginatedDataSources.map((ds) => (
                 <TableRow key={ds.id} hover>
                   <TableCell>
                     <Link
@@ -195,6 +212,15 @@ export default function DataSourcesPage() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={dataSources?.length || 0}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
         </TableContainer>
       )}
 
