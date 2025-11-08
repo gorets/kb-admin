@@ -13,6 +13,8 @@ import {
   StartSyncDataSourceCommand,
   StopSyncDataSourceCommand,
   GetSyncStatusCommand,
+  SyncDataSourceMode,
+  SyncDataSourceStatus,
 } from '@wildix/wim-knowledge-base-client'
 
 export const useDataSources = () => {
@@ -97,7 +99,7 @@ export const useDeleteDataSource = () => {
 // Sync operations
 export const useStartSyncDataSource = () => {
   return useMutation({
-    mutationFn: async ({ dataSourceId, syncType }: { dataSourceId: string; syncType: 'full' | 'incremental' }) => {
+    mutationFn: async ({ dataSourceId, syncType }: { dataSourceId: string; syncType: SyncDataSourceMode }) => {
       const response = await kbClient.send(new StartSyncDataSourceCommand({
         dataSourceId,
         syncType,
@@ -125,7 +127,7 @@ export const useSyncStatus = (dataSourceId: string, enabled: boolean = false) =>
       const response = await kbClient.send(new GetSyncStatusCommand({
         dataSourceId,
       }))
-      return response.syncStatus
+      return response.syncStatus as SyncDataSourceStatus
     },
     enabled: enabled && !!dataSourceId,
     refetchInterval: enabled ? 5000 : false, // Poll every 5 seconds when enabled

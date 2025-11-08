@@ -39,6 +39,7 @@ import { useDocuments, useDeleteDocument } from '../hooks/useDocuments'
 import DocumentDialog from '../components/DocumentDialog'
 import DataSourceDialog from '../components/DataSourceDialog'
 import type { Document as DocumentType, DataSource } from '../types'
+import { SyncDataSourceMode, SyncDataSourceStatus } from '@wildix/wim-knowledge-base-client'
 
 export default function DataSourceDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -86,7 +87,7 @@ export default function DataSourceDetailPage() {
     }
   }
 
-  const handleStartSync = async (syncType: 'full' | 'incremental') => {
+  const handleStartSync = async (syncType: SyncDataSourceMode) => {
     try {
       await startSyncMutation.mutateAsync({ dataSourceId: id!, syncType })
       setSyncPollingEnabled(true)
@@ -114,9 +115,9 @@ export default function DataSourceDetailPage() {
     setDocumentDialogOpen(true)
   }
 
-  const handleDeleteDocument = async (docId: string) => {
+  const handleDeleteDocument = async (dataSourceId: string, documentId: string) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
-      await deleteDocumentMutation.mutateAsync(docId)
+      await deleteDocumentMutation.mutateAsync({dataSourceId, documentId})
     }
   }
 
@@ -189,9 +190,9 @@ export default function DataSourceDetailPage() {
                 label={syncStatus.status || 'idle'}
                 size="small"
                 color={
-                  syncStatus.status === 'running' ? 'primary' :
-                  syncStatus.status === 'completed' ? 'success' :
-                  syncStatus.status === 'failed' ? 'error' :
+                  syncStatus.status === SyncDataSourceStatus.RUNNING ? 'primary' :
+                    syncStatus.status === SyncDataSourceStatus.SUCCESS ? 'success' :
+                      syncStatus.status === SyncDataSourceStatus.FAILED ? 'error' :
                   'default'
                 }
                 sx={{ mt: 0.5 }}
@@ -415,7 +416,7 @@ export default function DataSourceDetailPage() {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeleteDocument(doc.id)}
+                        onClick={() => handleDeleteDocument(doc.dataSourceId, doc.id)}
                         color="error"
                       >
                         <DeleteIcon fontSize="small" />

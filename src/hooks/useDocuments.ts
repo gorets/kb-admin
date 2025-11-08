@@ -24,14 +24,14 @@ export const useDocuments = (dataSourceId?: string) => {
   })
 }
 
-export const useDocument = (id: string) => {
+export const useDocument = (dataSourceId: string, documentId: string) => {
   return useQuery({
-    queryKey: ['document', id],
+    queryKey: ['document', documentId],
     queryFn: async () => {
-      const response = await kbClient.send(new GetDocumentCommand({ documentId: id }));
+      const response = await kbClient.send(new GetDocumentCommand({ dataSourceId, documentId }));
       return response.document
     },
-    enabled: !!id,
+    enabled: !!documentId,
   })
 }
 
