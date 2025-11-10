@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import {
   Divider,
   Stack,
   LinearProgress,
+  Collapse,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
@@ -40,7 +41,8 @@ import { useDocuments, useDeleteDocument } from '../hooks/useDocuments'
 import DocumentDialog from '../components/DocumentDialog'
 import DataSourceDialog from '../components/DataSourceDialog'
 import type { Document as DocumentType, DataSource } from '../types'
-import { SyncDataSourceMode, SyncDataSourceStatus } from '@wildix/wim-knowledge-base-client'
+import { DocumentStatus, SyncDataSourceMode, SyncDataSourceStatus } from '@wildix/wim-knowledge-base-client'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
 export default function DataSourceDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -53,6 +55,7 @@ export default function DataSourceDetailPage() {
   const [lastSyncErrorMessage, setLastSyncErrorMessage] = useState<string | undefined>(undefined)
   const [docsPage, setDocsPage] = useState(0)
   const [docsRowsPerPage, setDocsRowsPerPage] = useState(10)
+  const [expanded, setExpanded] = useState(false);
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
@@ -151,7 +154,7 @@ export default function DataSourceDetailPage() {
 
   const handleDeleteDocument = async (dataSourceId: string, documentId: string) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
-      await deleteDocumentMutation.mutateAsync({dataSourceId, documentId})
+      await deleteDocumentMutation.mutateAsync({ dataSourceId, documentId })
     }
   }
 
@@ -285,22 +288,26 @@ export default function DataSourceDetailPage() {
 
           {dataSource.config && Object.keys(dataSource.config).length > 0 && (
             <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                Configuration
-              </Typography>
-              <Box
-                component="pre"
-                sx={{
-                  backgroundColor: 'grey.100',
-                  p: 2,
-                  borderRadius: 1,
-                  overflow: 'auto',
-                  fontSize: '0.875rem',
-                }}
+              <Button
+                variant="outlined"
+                onClick={() => setExpanded(!expanded)}
               >
-                {JSON.stringify(dataSource.config, null, 2)}
-              </Box>
+                {expanded ? 'Hide' : 'Show'} Configuration
+              </Button>
+              <Collapse in={expanded}>
+                <Box
+                  component="pre"
+                  sx={{
+                    backgroundColor: 'grey.100',
+                    p: 1,
+                    borderRadius: 1,
+                    overflow: 'auto',
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  {JSON.stringify(dataSource.config, null, 2)}
+                </Box>
+              </Collapse>
             </Grid>
           )}
 
@@ -372,14 +379,16 @@ export default function DataSourceDetailPage() {
                 <TableRow>
                   <TableCell>Title</TableCell>
                   <TableCell>Content Preview</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>Created</TableCell>
+                  <TableCell>Updated</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {paginatedDocuments.map((doc) => (
                   <TableRow key={doc.id} hover>
-                    <TableCell sx={{width: '70%'}}>
+                    <TableCell sx={{ width: '50%' }}>
                       <Typography variant="body1" fontWeight="medium">
                         {doc.title}
                       </Typography>
@@ -389,13 +398,32 @@ export default function DataSourceDetailPage() {
                         variant="body2"
                         color="text.secondary"
                       >
-                        Get
+                        {doc.url && <Link to={doc.url} target="_blank" rel="noopener noreferrer">
+                          <IconButton size="small" color="primary">
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
+                        </Link>}
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={doc.status}
+                        size="small"
+                        color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
+                      />
+                      
                     </TableCell>
                     <TableCell>
                       {doc.createdAt && (
                         <Typography variant="body2">
                           {new Date(doc.createdAt).toLocaleDateString()}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {doc.updatedAt && (
+                        <Typography variant="body2">
+                          {new Date(doc.updatedAt).toLocaleDateString()}
                         </Typography>
                       )}
                     </TableCell>
