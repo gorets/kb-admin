@@ -161,9 +161,9 @@ export default function DataSourceDetailPage() {
   const handleClone = async () => {
     if (window.confirm('Are you sure you want to clone this data source?')) {
       try {
-        const clonedDataSource = await cloneDataSourceMutation.mutateAsync(id!)
-        if (clonedDataSource?.id) {
-          navigate(`/data-sources/${clonedDataSource.id}`)
+        const response = await cloneDataSourceMutation.mutateAsync(id!)
+        if (response?.dataSourceId) {
+          navigate(`/data-sources/${response.dataSourceId}`)
         }
       } catch (error) {
         console.error('Error cloning data source:', error)

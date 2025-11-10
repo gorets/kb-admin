@@ -162,7 +162,7 @@ export const useCloneDataSource = () => {
       const response = await kbClient.send(new CloneDataSourceCommand({
         dataSourceId,
       }))
-      return response.dataSource
+      return response
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataSources'] })
