@@ -12,14 +12,14 @@ const tokenProvider = {
 export const kbClient = new KnowledgeBaseClient({
   env: 'stage',
   token: tokenProvider,
-  endpoint: () => {
-    return {
-      hostname: 'localhost',
-      protocol: "http",
-      port: '3000',
-      path: ''
-    }
-  }
+  // endpoint: () => {
+  //   return {
+  //     hostname: 'localhost',
+  //     protocol: "http",
+  //     port: '3000',
+  //     path: ''
+  //   }
+  // }
 })
 
 // Get token from localStorage
