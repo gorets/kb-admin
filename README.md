@@ -12,6 +12,12 @@
 - **React Router** - роутинг
 - **@wildix/wim-knowledge-base-client** - клиент для работы с API
 
+## Setup Credentials
+
+```
+localStorage.setItem('kb_admin_token', 'wsk-v1-ddxxOMSUacpNQy43yUjzXQKiLYwVlNi5UnY******')
+```
+
 ## Структура проекта
 
 ```
