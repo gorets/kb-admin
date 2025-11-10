@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import {
   Divider,
   Stack,
   LinearProgress,
+  Collapse,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
@@ -44,7 +45,8 @@ import { useDocuments, useDeleteDocument } from '../hooks/useDocuments'
 import DocumentDialog from '../components/DocumentDialog'
 import DataSourceDialog from '../components/DataSourceDialog'
 import type { Document as DocumentType, DataSource } from '../types'
-import { SyncDataSourceMode, SyncDataSourceStatus } from '@wildix/wim-knowledge-base-client'
+import { DocumentStatus, SyncDataSourceMode, SyncDataSourceStatus } from '@wildix/wim-knowledge-base-client'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
 export default function DataSourceDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -57,6 +59,7 @@ export default function DataSourceDetailPage() {
   const [lastSyncErrorMessage, setLastSyncErrorMessage] = useState<string | undefined>(undefined)
   const [docsPage, setDocsPage] = useState(0)
   const [docsRowsPerPage, setDocsRowsPerPage] = useState(10)
+  const [expanded, setExpanded] = useState(false);
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
@@ -180,7 +183,7 @@ export default function DataSourceDetailPage() {
 
   const handleDeleteDocument = async (dataSourceId: string, documentId: string) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
-      await deleteDocumentMutation.mutateAsync({dataSourceId, documentId})
+      await deleteDocumentMutation.mutateAsync({ dataSourceId, documentId })
     }
   }
 
@@ -221,7 +224,7 @@ export default function DataSourceDetailPage() {
           <IconButton onClick={handleBack}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4">Data Source Details</Typography>
+          <Typography variant="h4">{dataSource.name}</Typography>
         </Box>
         <Stack direction="row" spacing={1}>
           <Button
@@ -259,39 +262,110 @@ export default function DataSourceDetailPage() {
         </Stack>
       </Box>
 
-      {/* Sync Status */}
-      {currentSyncStatus && (
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Sync Status
-          </Typography>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Status
+      {/* Data Source Information */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Grid container spacing={2}>
+
+          {dataSource.description && (
+            <Grid item xs={12}>
+              <Typography variant="body1" color="text.secondary">
+                {dataSource.description}
               </Typography>
-              <Chip
-                label={currentSyncStatus || 'idle'}
-                size="small"
-                color={
-                  currentSyncStatus === SyncDataSourceStatus.RUNNING ? 'primary' :
-                    currentSyncStatus === SyncDataSourceStatus.SUCCESS ? 'success' :
-                      currentSyncStatus === SyncDataSourceStatus.FAILED ? 'error' :
-                  'default'
-                }
-                sx={{ mt: 0.5 }}
-              />
             </Grid>
-            {lastSyncErrorMessage && (
-              <Grid item xs={12}>
-                <Alert severity="error" sx={{ mt: 1 }}>
-                  {lastSyncErrorMessage}
-                </Alert>
-              </Grid>
-            )}
+          )}
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Type
+            </Typography>
+            <Chip label={dataSource.type} size="small" color="primary" sx={{ mt: 0.5 }} />
           </Grid>
-        </Paper>
-      )}
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Status
+            </Typography>
+            <Chip
+              label={dataSource.enabled ? 'Enabled' : 'Disabled'}
+              size="small"
+              color={dataSource.enabled ? 'success' : 'default'}
+              sx={{ mt: 0.5 }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Typography variant="caption" color="text.secondary" display="block">
+              Sync Status
+            </Typography>
+            <Chip
+              label={currentSyncStatus || 'idle'}
+              size="small"
+              color={
+                currentSyncStatus === SyncDataSourceStatus.RUNNING ? 'primary' :
+                  currentSyncStatus === SyncDataSourceStatus.SUCCESS ? 'success' :
+                    currentSyncStatus === SyncDataSourceStatus.FAILED ? 'error' :
+                      'default'
+              }
+              sx={{ mt: 0.5 }}
+            />
+          </Grid>
+
+          {dataSource.createdAt && (
+            <Grid item xs={12} sm={6} md={1}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Created
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {new Date(dataSource.createdAt).toLocaleDateString()}
+              </Typography>
+            </Grid>
+          )}
+
+          {dataSource.updatedAt && (
+            <Grid item xs={12} sm={6} md={1}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Updated
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {new Date(dataSource.updatedAt).toLocaleDateString()}
+              </Typography>
+            </Grid>
+          )}
+
+          {dataSource.config && Object.keys(dataSource.config).length > 0 && (
+            <Grid item xs={12}>
+              <Button
+                variant="outlined"
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? 'Hide' : 'Show'} Configuration
+              </Button>
+              <Collapse in={expanded}>
+                <Box
+                  component="pre"
+                  sx={{
+                    backgroundColor: 'grey.100',
+                    p: 1,
+                    borderRadius: 1,
+                    overflow: 'auto',
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  {JSON.stringify(dataSource.config, null, 2)}
+                </Box>
+              </Collapse>
+            </Grid>
+          )}
+
+          {lastSyncErrorMessage && (
+            <Grid item xs={12}>
+              <Alert severity="error" sx={{ mt: 1 }}>
+                {lastSyncErrorMessage}
+              </Alert>
+            </Grid>
+          )}
+        </Grid>
+      </Paper>
 
       {/* Sync Controls */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -327,91 +401,10 @@ export default function DataSourceDetailPage() {
         </Stack>
       </Paper>
 
-      {/* Data Source Information */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Typography variant="h5" gutterBottom>
-              {dataSource.name}
-            </Typography>
-          </Grid>
-
-          {dataSource.description && (
-            <Grid item xs={12}>
-              <Typography variant="body1" color="text.secondary">
-                {dataSource.description}
-              </Typography>
-            </Grid>
-          )}
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography variant="caption" color="text.secondary" display="block">
-              Type
-            </Typography>
-            <Chip label={dataSource.type} size="small" color="primary" sx={{ mt: 0.5 }} />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography variant="caption" color="text.secondary" display="block">
-              Status
-            </Typography>
-            <Chip
-              label={dataSource.enabled ? 'Enabled' : 'Disabled'}
-              size="small"
-              color={dataSource.enabled ? 'success' : 'default'}
-              sx={{ mt: 0.5 }}
-            />
-          </Grid>
-
-          {dataSource.createdAt && (
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Created
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {new Date(dataSource.createdAt).toLocaleDateString()}
-              </Typography>
-            </Grid>
-          )}
-
-          {dataSource.updatedAt && (
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Updated
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {new Date(dataSource.updatedAt).toLocaleDateString()}
-              </Typography>
-            </Grid>
-          )}
-
-          {dataSource.config && Object.keys(dataSource.config).length > 0 && (
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                Configuration
-              </Typography>
-              <Box
-                component="pre"
-                sx={{
-                  backgroundColor: 'grey.100',
-                  p: 2,
-                  borderRadius: 1,
-                  overflow: 'auto',
-                  fontSize: '0.875rem',
-                }}
-              >
-                {JSON.stringify(dataSource.config, null, 2)}
-              </Box>
-            </Grid>
-          )}
-        </Grid>
-      </Paper>
-
       {/* Documents Section */}
       <Box>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5">Documents</Typography>
+          <Typography variant="h5">Documents ({documents?.length || '???'})</Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -432,14 +425,16 @@ export default function DataSourceDetailPage() {
                 <TableRow>
                   <TableCell>Title</TableCell>
                   <TableCell>Content Preview</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>Created</TableCell>
+                  <TableCell>Updated</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {paginatedDocuments.map((doc) => (
                   <TableRow key={doc.id} hover>
-                    <TableCell>
+                    <TableCell sx={{ width: '50%' }}>
                       <Typography variant="body1" fontWeight="medium">
                         {doc.title}
                       </Typography>
@@ -448,20 +443,33 @@ export default function DataSourceDetailPage() {
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{
-                          maxWidth: 400,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
                       >
-                        {doc.content}
+                        {doc.url && <Link to={doc.url} target="_blank" rel="noopener noreferrer">
+                          <IconButton size="small" color="primary">
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
+                        </Link>}
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={doc.status}
+                        size="small"
+                        color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
+                      />
+                      
                     </TableCell>
                     <TableCell>
                       {doc.createdAt && (
                         <Typography variant="body2">
                           {new Date(doc.createdAt).toLocaleDateString()}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {doc.updatedAt && (
+                        <Typography variant="body2">
+                          {new Date(doc.updatedAt).toLocaleDateString()}
                         </Typography>
                       )}
                     </TableCell>

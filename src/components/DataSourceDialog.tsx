@@ -43,8 +43,8 @@ export default function DataSourceDialog({
   const initialValues = useMemo<CreateDataSourceRequest>(() => ({
     name: '',
     description: '',
-    type: DataSourceType.FILES,
-    config: { files: { allowedExtensions: [] } },
+    type: DataSourceType.CONFLUENCE,
+    config: { confluence: { baseUrl: '', username: '', apiKey: '', spaceId: '', pages: { enabled: [], disabled: [] } } },
     enabled: true,
     syncSchedule: undefined,
   }), [])
@@ -70,7 +70,7 @@ export default function DataSourceDialog({
         name: dataSource.name,
         description: dataSource.description || '',
         type: dataSource.type || DataSourceType.FILES,
-        config: dataSource.config || { files: { allowedExtensions: [] } },
+        config: dataSource.config || { confluence: { baseUrl: '', username: '', apiKey: '', spaceId: '', pages: { enabled: [], disabled: [] } } },
         enabled: dataSource.enabled ?? true,
         syncSchedule: dataSource.syncSchedule,
       })
@@ -92,7 +92,7 @@ export default function DataSourceDialog({
         case DataSourceType.CONFLUENCE:
           setConfig({
             confluence: {
-              url: '',
+              baseUrl: '',
               username: '',
               apiKey: '',
               spaceId: '',
@@ -167,8 +167,8 @@ export default function DataSourceDialog({
           <>
             <TextField
               label="Confluence URL"
-              value={config.confluence?.url || ''}
-              onChange={(e) => handleConfigChange(['confluence', 'url'], e.target.value)}
+              value={config.confluence?.baseUrl || ''}
+              onChange={(e) => handleConfigChange(['confluence', 'baseUrl'], e.target.value)}
               placeholder="https://your-domain.atlassian.net"
               fullWidth
               required
