@@ -13,6 +13,8 @@ import {
   StartSyncDataSourceCommand,
   StopSyncDataSourceCommand,
   GetSyncStatusCommand,
+  ClearDataSourceCommand,
+  CloneDataSourceCommand,
   SyncDataSourceMode,
   SyncDataSourceStatus,
   GetSyncStatusOutput,
@@ -132,5 +134,38 @@ export const useSyncStatus = (dataSourceId: string, enabled: boolean = false) =>
     },
     enabled: enabled && !!dataSourceId,
     refetchInterval: enabled ? 5000 : false, // Poll every 5 seconds when enabled
+  })
+}
+
+export const useClearDataSource = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (dataSourceId: string) => {
+      const response = await kbClient.send(new ClearDataSourceCommand({
+        dataSourceId,
+      }))
+      return response
+    },
+    onSuccess: (_, dataSourceId) => {
+      queryClient.invalidateQueries({ queryKey: ['dataSource', dataSourceId] })
+      queryClient.invalidateQueries({ queryKey: ['documents', dataSourceId] })
+    },
+  })
+}
+
+export const useCloneDataSource = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (dataSourceId: string) => {
+      const response = await kbClient.send(new CloneDataSourceCommand({
+        dataSourceId,
+      }))
+      return response.dataSource
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dataSources'] })
+    },
   })
 }

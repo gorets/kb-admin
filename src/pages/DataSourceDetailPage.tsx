@@ -28,6 +28,8 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
 import RefreshIcon from '@mui/icons-material/Refresh'
+import ClearIcon from '@mui/icons-material/Clear'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import {
   useDataSource,
   useDeleteDataSource,
@@ -35,6 +37,8 @@ import {
   useStartSyncDataSource,
   useStopSyncDataSource,
   useSyncStatus,
+  useClearDataSource,
+  useCloneDataSource,
 } from '../hooks/useDataSources'
 import { useDocuments, useDeleteDocument } from '../hooks/useDocuments'
 import DocumentDialog from '../components/DocumentDialog'
@@ -63,6 +67,8 @@ export default function DataSourceDetailPage() {
   const updateDataSourceMutation = useUpdateDataSource()
   const startSyncMutation = useStartSyncDataSource()
   const stopSyncMutation = useStopSyncDataSource()
+  const clearDataSourceMutation = useClearDataSource()
+  const cloneDataSourceMutation = useCloneDataSource()
 
   // Initialize sync status from dataSource on first load
   useEffect(() => {
@@ -139,6 +145,29 @@ export default function DataSourceDetailPage() {
     }
   }
 
+  const handleClear = async () => {
+    if (window.confirm('Are you sure you want to clear all data from this data source? This action cannot be undone.')) {
+      try {
+        await clearDataSourceMutation.mutateAsync(id!)
+      } catch (error) {
+        console.error('Error clearing data source:', error)
+      }
+    }
+  }
+
+  const handleClone = async () => {
+    if (window.confirm('Are you sure you want to clone this data source?')) {
+      try {
+        const clonedDataSource = await cloneDataSourceMutation.mutateAsync(id!)
+        if (clonedDataSource?.id) {
+          navigate(`/data-sources/${clonedDataSource.id}`)
+        }
+      } catch (error) {
+        console.error('Error cloning data source:', error)
+      }
+    }
+  }
+
   const handleAddDocument = () => {
     setSelectedDocument(null)
     setDocumentDialogOpen(true)
@@ -201,6 +230,23 @@ export default function DataSourceDetailPage() {
             onClick={handleEdit}
           >
             Edit
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<ContentCopyIcon />}
+            onClick={handleClone}
+            disabled={cloneDataSourceMutation.isPending}
+          >
+            Clone
+          </Button>
+          <Button
+            variant="outlined"
+            color="warning"
+            startIcon={<ClearIcon />}
+            onClick={handleClear}
+            disabled={clearDataSourceMutation.isPending}
+          >
+            Clear
           </Button>
           <Button
             variant="outlined"
