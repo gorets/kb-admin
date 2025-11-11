@@ -9,6 +9,9 @@ import {
   DeleteKnowledgeBaseCommand,
   SearchKnowledgeBaseCommand,
   QueryKnowledgeBaseCommand,
+  QueryKnowledgeBaseOutput,
+  SearchKnowledgeBaseOutput,
+  SearchStrategy,
 } from '@wildix/wim-knowledge-base-client'
 
 
@@ -93,16 +96,18 @@ export const useSearchKnowledgeBase = () => {
       query: string
       topK?: number
       threshold?: number
-      strategy?: 'HYBRID' | 'VECTOR' | 'BM25'
+      strategy?: 'hybrid' | 'vector' | 'bm25'
     }) => {
       const response = await kbClient.send(new SearchKnowledgeBaseCommand({
         knowledgeBaseId: params.knowledgeBaseId,
         query: params.query,
-        topK: params.topK,
-        threshold: params.threshold,
-        strategy: params.strategy,
+        searchConfig: {
+          topK: params.topK,
+          threshold: params.threshold,
+          searchStrategy: params.strategy,
+        },
       }))
-      return response
+      return response as SearchKnowledgeBaseOutput
     },
   })
 }
@@ -115,17 +120,27 @@ export const useQueryKnowledgeBase = () => {
       topK?: number
       threshold?: number
       maxTokens?: number
-      strategy?: 'HYBRID' | 'VECTOR' | 'BM25'
+      strategy?: 'hybrid' | 'vector' | 'bm25'
     }) => {
       const response = await kbClient.send(new QueryKnowledgeBaseCommand({
         knowledgeBaseId: params.knowledgeBaseId,
         query: params.query,
-        topK: params.topK,
-        threshold: params.threshold,
-        maxTokens: params.maxTokens,
-        strategy: params.strategy,
+        searchConfig: {
+          topK: params.topK,
+          threshold: params.threshold,
+          searchStrategy: params.strategy,
+        },
+        llmConfig: {
+          provider: 'openai',
+          model: 'gpt-4o',
+          temperature: 0.33,
+          systemPrompt: 'You are a helpful assistant that can answer questions about the knowledge base.',
+        },
       }))
-      return response
+
+      console.log('response', response);
+
+      return response as QueryKnowledgeBaseOutput
     },
   })
 }

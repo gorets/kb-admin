@@ -13,7 +13,7 @@ import {
   StartSyncDataSourceCommand,
   StopSyncDataSourceCommand,
   GetSyncStatusCommand,
-  ClearDataSourceCommand,
+  CleanDataSourceCommand,
   CloneDataSourceCommand,
   SyncDataSourceMode,
   SyncDataSourceStatus,
@@ -142,7 +142,7 @@ export const useClearDataSource = () => {
 
   return useMutation({
     mutationFn: async (dataSourceId: string) => {
-      const response = await kbClient.send(new ClearDataSourceCommand({
+      const response = await kbClient.send(new CleanDataSourceCommand({
         dataSourceId,
       }))
       return response
