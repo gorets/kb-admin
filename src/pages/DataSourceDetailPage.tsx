@@ -8,6 +8,7 @@ import {
   Alert,
   Paper,
   Chip,
+  Tooltip,
   Table,
   TableBody,
   TableCell,
@@ -452,11 +453,22 @@ export default function DataSourceDetailPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={doc.status}
-                        size="small"
-                        color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
-                      />
+                      {doc.errorMessage ? (
+                        <Tooltip title={doc.errorMessage} arrow>
+                          <Chip
+                            label={doc.status}
+                            size="small"
+                            color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
+                            tabIndex={0}
+                          />
+                        </Tooltip>
+                      ) : (
+                        <Chip
+                          label={doc.status}
+                          size="small"
+                          color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
+                        />
+                      )}
                       
                     </TableCell>
                     <TableCell>
