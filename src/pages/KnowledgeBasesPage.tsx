@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Box,
   Button,
@@ -130,9 +131,21 @@ export default function KnowledgeBasesPage() {
               {paginatedKnowledgeBases.map((kb) => (
                 <TableRow key={kb.id} hover>
                   <TableCell>
-                    <Typography variant="body1" fontWeight="medium">
-                      {kb.name}
-                    </Typography>
+                    <Link
+                      to={`/knowledge-bases/${kb.id}`}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <Typography
+                        variant="body1"
+                        fontWeight="medium"
+                        sx={{
+                          '&:hover': { color: 'primary.main', textDecoration: 'underline' },
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {kb.name}
+                      </Typography>
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">

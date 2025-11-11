@@ -7,6 +7,8 @@ import {
   ListKnowledgeBasesCommand,
   UpdateKnowledgeBaseCommand,
   DeleteKnowledgeBaseCommand,
+  SearchKnowledgeBaseCommand,
+  QueryKnowledgeBaseCommand,
 } from '@wildix/wim-knowledge-base-client'
 
 
@@ -80,6 +82,50 @@ export const useDeleteKnowledgeBase = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['knowledgeBases'] })
       queryClient.invalidateQueries({ queryKey: ['knowledgeBase', id] })
+    },
+  })
+}
+
+export const useSearchKnowledgeBase = () => {
+  return useMutation({
+    mutationFn: async (params: {
+      knowledgeBaseId: string
+      query: string
+      topK?: number
+      threshold?: number
+      strategy?: 'HYBRID' | 'VECTOR' | 'BM25'
+    }) => {
+      const response = await kbClient.send(new SearchKnowledgeBaseCommand({
+        knowledgeBaseId: params.knowledgeBaseId,
+        query: params.query,
+        topK: params.topK,
+        threshold: params.threshold,
+        strategy: params.strategy,
+      }))
+      return response
+    },
+  })
+}
+
+export const useQueryKnowledgeBase = () => {
+  return useMutation({
+    mutationFn: async (params: {
+      knowledgeBaseId: string
+      query: string
+      topK?: number
+      threshold?: number
+      maxTokens?: number
+      strategy?: 'HYBRID' | 'VECTOR' | 'BM25'
+    }) => {
+      const response = await kbClient.send(new QueryKnowledgeBaseCommand({
+        knowledgeBaseId: params.knowledgeBaseId,
+        query: params.query,
+        topK: params.topK,
+        threshold: params.threshold,
+        maxTokens: params.maxTokens,
+        strategy: params.strategy,
+      }))
+      return response
     },
   })
 }
