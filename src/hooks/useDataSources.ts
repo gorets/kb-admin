@@ -16,7 +16,6 @@ import {
   CleanDataSourceCommand,
   CloneDataSourceCommand,
   SyncDataSourceMode,
-  SyncDataSourceStatus,
   GetSyncStatusOutput,
 } from '@wildix/wim-knowledge-base-client'
 
