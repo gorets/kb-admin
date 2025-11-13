@@ -187,8 +187,8 @@ const KnowledgeBaseDetailPage = () => {
   // Form state
   const [query, setQuery] = useState('')
   const [topK, setTopK] = useState(10)
-  const [threshold, setThreshold] = useState(0.35)
-  const [maxTokens, setMaxTokens] = useState(1000)
+  const [threshold, setThreshold] = useState(0.5)
+  const [maxOutputTokens, setMaxOutputTokens] = useState(1000)
   const [strategy, setStrategy] = useState<'hybrid' | 'vector' | 'bm25'>('hybrid')
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
 
@@ -258,7 +258,7 @@ const KnowledgeBaseDetailPage = () => {
     if (activeTab === 'ai-answer') {
       await queryMutation.mutateAsync({
         ...params,
-        maxTokens,
+        maxOutputTokens,
       })
     } else {
       await searchMutation.mutateAsync(params)
@@ -475,9 +475,9 @@ const KnowledgeBaseDetailPage = () => {
               {activeTab === 'ai-answer' && (
                 <TextField
                   type="number"
-                  label="Max Tokens"
-                  value={maxTokens}
-                  onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                  label="Max Output Tokens"
+                  value={maxOutputTokens}
+                  onChange={(e) => setMaxOutputTokens(parseInt(e.target.value))}
                   inputProps={{ min: 100, max: 4000 }}
                 />
               )}

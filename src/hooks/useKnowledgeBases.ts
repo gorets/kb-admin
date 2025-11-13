@@ -119,7 +119,7 @@ export const useQueryKnowledgeBase = () => {
       query: string
       topK?: number
       threshold?: number
-      maxTokens?: number
+      maxOutputTokens?: number
       strategy?: 'hybrid' | 'vector' | 'bm25'
     }) => {
       const response = await kbClient.send(new QueryKnowledgeBaseCommand({
@@ -132,9 +132,10 @@ export const useQueryKnowledgeBase = () => {
         },
         llmConfig: {
           provider: 'openai',
-          model: 'gpt-4o',
-          temperature: 0.33,
-          systemPrompt: 'You are a helpful assistant that can answer questions about the knowledge base.',
+          model: 'gpt-5-mini',
+          temperature: 0.3,
+          // systemPrompt: 'You are a helpful assistant that can answer questions about the knowledge base.',
+          maxOutputTokens: params.maxOutputTokens,
         },
       }))
 
