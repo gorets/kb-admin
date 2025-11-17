@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Card,
   CardContent,
@@ -8,16 +8,11 @@ import {
   Chip,
   Box,
   Collapse,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Button,
   CircularProgress,
+  TextField,
 } from '@mui/material'
+import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -41,10 +36,21 @@ export default function DataSourceCard({
   const [expanded, setExpanded] = useState(false)
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null)
+  const [searchText, setSearchText] = useState('')
 
   const { data: documents, isLoading: documentsLoading } = useDocuments(
     expanded ? dataSource.id : undefined
   )
+
+  const filteredDocuments = useMemo(() => {
+    if (!documents || !searchText) return documents || []
+
+    const lowerSearch = searchText.toLowerCase()
+    return documents.filter((doc) =>
+      doc.title?.toLowerCase().includes(lowerSearch) ||
+      doc.content?.toLowerCase().includes(lowerSearch)
+    )
+  }, [documents, searchText])
   const deleteMutation = useDeleteDocument()
 
   const handleExpandClick = () => {
@@ -66,6 +72,72 @@ export default function DataSourceCard({
       await deleteMutation.mutateAsync({ documentId: docId, dataSourceId: dataSource.id })
     }
   }
+
+  const columns: GridColDef[] = [
+    {
+      field: 'title',
+      headerName: 'Title',
+      flex: 1,
+      renderCell: (params) => (
+        <Typography variant="body2" fontWeight="medium">
+          {params.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'content',
+      headerName: 'Content Preview',
+      flex: 2,
+      renderCell: (params) => (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {params.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <Typography variant="caption">
+            {new Date(params.value).toLocaleDateString()}
+          </Typography>
+        ) : null,
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 0.5,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <IconButton
+            size="small"
+            onClick={() => handleEditDocument(params.row)}
+            color="primary"
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDeleteDocument(params.row.id)}
+            color="error"
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ]
 
   return (
     <>
@@ -136,66 +208,30 @@ export default function DataSourceCard({
                 <CircularProgress size={30} />
               </Box>
             ) : documents && documents.length > 0 ? (
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Title</TableCell>
-                      <TableCell>Content Preview</TableCell>
-                      <TableCell>Created</TableCell>
-                      <TableCell align="right">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {documents.map((doc) => (
-                      <TableRow key={doc.id} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight="medium">
-                            {doc.title}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              maxWidth: 300,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {doc.content}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {doc.createdAt && (
-                            <Typography variant="caption">
-                              {new Date(doc.createdAt).toLocaleDateString()}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditDocument(doc)}
-                            color="primary"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteDocument(doc.id)}
-                            color="error"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <Box sx={{ height: 400, width: '100%' }}>
+                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                  <TextField
+                    fullWidth
+                    placeholder="Search documents..."
+                    variant="outlined"
+                    size="small"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                  />
+                </Box>
+                <DataGrid
+                  rows={filteredDocuments}
+                  columns={columns}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { pageSize: 5, page: 0 },
+                    },
+                  }}
+                  pageSizeOptions={[5, 10, 25]}
+                  disableRowSelectionOnClick
+                  density="compact"
+                />
+              </Box>
             ) : (
               <Typography variant="body2" color="text.secondary" align="center" py={2}>
                 No documents yet. Click "Add Document" to create one.
@@ -208,7 +244,7 @@ export default function DataSourceCard({
       <DocumentDialog
         open={documentDialogOpen}
         onClose={() => setDocumentDialogOpen(false)}
-        onSubmit={(data) => {
+        onSubmit={() => {
           // Submit handled by DocumentDialog
           setDocumentDialogOpen(false)
         }}

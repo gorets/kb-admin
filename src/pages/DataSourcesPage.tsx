@@ -1,26 +1,19 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Box,
   Button,
   Typography,
   CircularProgress,
   Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Paper,
   Chip,
   Link,
   IconButton,
+  TextField,
 } from '@mui/material'
+import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
-import VisibilityIcon from '@mui/icons-material/Visibility'
 import { useNavigate } from 'react-router-dom'
 import {
   useDataSources,
@@ -38,11 +31,20 @@ export default function DataSourcesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDS, setSelectedDS] = useState<DataSource | null>(null)
   const [selectedType, setSelectedType] = useState<DataSourceType | undefined>(undefined)
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [searchText, setSearchText] = useState('')
   const navigate = useNavigate()
 
   const { data: dataSources, isLoading, error } = useDataSources()
+
+  const filteredDataSources = useMemo(() => {
+    if (!dataSources || !searchText) return dataSources || []
+
+    const lowerSearch = searchText.toLowerCase()
+    return dataSources.filter((ds) =>
+      ds.name?.toLowerCase().includes(lowerSearch) ||
+      ds.type?.toLowerCase().includes(lowerSearch)
+    )
+  }, [dataSources, searchText])
   const createMutation = useCreateDataSource()
   const updateMutation = useUpdateDataSource()
   const deleteMutation = useDeleteDataSource()
@@ -93,19 +95,99 @@ export default function DataSourcesPage() {
     setSelectedType(undefined)
   }
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage)
-  }
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10))
-    setPage(0)
-  }
-
-  // Paginated data
-  const paginatedDataSources = dataSources
-    ? dataSources.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-    : []
+  const columns: GridColDef[] = [
+    {
+      field: 'name',
+      headerName: 'Name',
+      flex: 2,
+      renderCell: (params) => (
+        <Link
+          component="button"
+          variant="body1"
+          onClick={() => handleViewDetails(params.row.id)}
+          sx={{ fontWeight: 'medium', textAlign: 'left' }}
+        >
+          {params.value}
+        </Link>
+      ),
+    },
+    {
+      field: 'type',
+      headerName: 'Type',
+      flex: 1,
+      renderCell: (params) => (
+        <Chip label={params.value} size="small" color="primary" />
+      ),
+    },
+    {
+      field: 'enabled',
+      headerName: 'Enabled',
+      flex: 1,
+      renderCell: (params) =>
+        params.value !== undefined ? (
+          <Chip
+            label={params.value ? 'Enabled' : 'Disabled'}
+            size="small"
+            color={params.value ? 'success' : 'default'}
+          />
+        ) : null,
+    },
+    {
+      field: 'syncSchedule',
+      headerName: 'Sync Schedule',
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? <Typography variant="body2">{params.value}</Typography> : null,
+    },
+    {
+      field: 'syncStatus',
+      headerName: 'Sync Status',
+      flex: 1,
+      renderCell: (params) =>
+        params.value !== undefined ? (
+          <Chip
+            label={params.value}
+            size="small"
+            color={params.value === 'running' ? 'primary' : 'default'}
+          />
+        ) : null,
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <Typography variant="body2">
+            {new Date(params.value).toLocaleDateString()}
+          </Typography>
+        ) : null,
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 1,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <IconButton
+            size="small"
+            onClick={() => handleEdit(params.row)}
+            color="primary"
+          >
+            <EditIcon />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDelete(params.row.id)}
+            color="error"
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ]
 
   if (isLoading) {
     return (
@@ -141,104 +223,29 @@ export default function DataSourcesPage() {
           No data sources found. Create your first one to get started.
         </Alert>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Enabled</TableCell>
-                <TableCell>Sync Schedule</TableCell>
-                <TableCell>Sync Status</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedDataSources.map((ds) => (
-                <TableRow key={ds.id} hover>
-                  <TableCell>
-                    <Link
-                      component="button"
-                      variant="body1"
-                      onClick={() => handleViewDetails(ds.id)}
-                      sx={{ fontWeight: 'medium', textAlign: 'left' }}
-                    >
-                      {ds.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={ds.type} size="small" color="primary" />
-                  </TableCell>
-                  <TableCell>
-                    {ds.enabled !== undefined && (
-                      <Chip
-                        label={ds.enabled ? 'Enabled' : 'Disabled'}
-                        size="small"
-                        color={ds.enabled ? 'success' : 'default'}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {ds.syncSchedule && (
-                      <Typography variant="body2">
-                        {ds.syncSchedule}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {ds.syncStatus !== undefined && (
-                      <Chip
-                        label={ds.syncStatus}
-                        size="small"
-                        color={ds.syncStatus === 'running' ? 'primary' : 'default'}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {ds.createdAt && (
-                      <Typography variant="body2">
-                        {new Date(ds.createdAt).toLocaleDateString()}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleViewDetails(ds.id)}
-                      color="primary"
-                    >
-                      <VisibilityIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(ds)}
-                      color="primary"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(ds.id)}
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <TablePagination
-            component="div"
-            count={dataSources?.length || 0}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[5, 10, 25, 50]}
+        <Box sx={{ height: 600, width: '100%' }}>
+          <Box sx={{ py: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <TextField
+              fullWidth
+              placeholder="Search data sources..."
+              variant="outlined"
+              size="small"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </Box>
+          <DataGrid
+            rows={filteredDataSources}
+            columns={columns}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10, page: 0 },
+              },
+            }}
+            pageSizeOptions={[5, 10, 25, 50]}
+            disableRowSelectionOnClick
           />
-        </TableContainer>
+        </Box>
       )}
 
       <DataSourceTypeDialog

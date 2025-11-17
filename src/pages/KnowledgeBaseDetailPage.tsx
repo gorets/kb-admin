@@ -655,12 +655,6 @@ const KnowledgeBaseDetailPage = () => {
                           : typeof chunk.dataSourceType === 'string'
                             ? chunk.dataSourceType
                             : undefined
-                      const rawChunkMetadata = (chunk as { metadata?: unknown }).metadata
-                      const metadataJson =
-                        rawChunkMetadata && typeof rawChunkMetadata === 'object'
-                          ? JSON.stringify(rawChunkMetadata)
-                          : null
-
                       return (
                         <Paper key={key} sx={{ p: 2, mb: 2, bgcolor: 'white' }}>
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 1, mb: 1 }}>

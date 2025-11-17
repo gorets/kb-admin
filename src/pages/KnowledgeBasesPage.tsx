@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Box,
@@ -7,15 +7,9 @@ import {
   IconButton,
   CircularProgress,
   Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Paper,
+  TextField,
 } from '@mui/material'
+import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -31,10 +25,19 @@ import type { KnowledgeBase } from '../types'
 export default function KnowledgeBasesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedKB, setSelectedKB] = useState<KnowledgeBase | null>(null)
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [searchText, setSearchText] = useState('')
 
   const { data: knowledgeBases, isLoading, error } = useKnowledgeBases()
+
+  const filteredKnowledgeBases = useMemo(() => {
+    if (!knowledgeBases || !searchText) return knowledgeBases || []
+
+    const lowerSearch = searchText.toLowerCase()
+    return knowledgeBases.filter((kb) =>
+      kb.name?.toLowerCase().includes(lowerSearch) ||
+      kb.description?.toLowerCase().includes(lowerSearch)
+    )
+  }, [knowledgeBases, searchText])
   const createMutation = useCreateKnowledgeBase()
   const updateMutation = useUpdateKnowledgeBase()
   const deleteMutation = useDeleteKnowledgeBase()
@@ -68,19 +71,87 @@ export default function KnowledgeBasesPage() {
     }
   }
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage)
-  }
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10))
-    setPage(0)
-  }
-
-  // Paginated data
-  const paginatedKnowledgeBases = knowledgeBases
-    ? knowledgeBases.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-    : []
+  const columns: GridColDef[] = [
+    {
+      field: 'name',
+      headerName: 'Name',
+      flex: 1,
+      renderCell: (params) => (
+        <Link
+          to={`/knowledge-bases/${params.row.id}`}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          <Typography
+            variant="body1"
+            fontWeight="medium"
+            sx={{
+              '&:hover': { color: 'primary.main', textDecoration: 'underline' },
+              cursor: 'pointer',
+            }}
+          >
+            {params.value}
+          </Typography>
+        </Link>
+      ),
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      flex: 2,
+      renderCell: (params) => (
+        <Typography variant="body2" color="text.secondary">
+          {params.value || 'No description'}
+        </Typography>
+      ),
+    },
+    {
+      field: 'dataSources',
+      headerName: 'Data Sources',
+      flex: 1,
+      renderCell: (params) => (
+        <Typography variant="body2">
+          {params.value && params.value.length > 0
+            ? params.value.length
+            : 'No data sources'}
+        </Typography>
+      ),
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <Typography variant="body2">
+            {new Date(params.value).toLocaleDateString()}
+          </Typography>
+        ) : null,
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 1,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <IconButton
+            size="small"
+            onClick={() => handleEdit(params.row)}
+            color="primary"
+          >
+            <EditIcon />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDelete(params.row.id)}
+            color="error"
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ]
 
   if (isLoading) {
     return (
@@ -116,86 +187,29 @@ export default function KnowledgeBasesPage() {
           No knowledge bases found. Create your first one to get started.
         </Alert>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Data Sources</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedKnowledgeBases.map((kb) => (
-                <TableRow key={kb.id} hover>
-                  <TableCell>
-                    <Link
-                      to={`/knowledge-bases/${kb.id}`}
-                      style={{ textDecoration: 'none', color: 'inherit' }}
-                    >
-                      <Typography
-                        variant="body1"
-                        fontWeight="medium"
-                        sx={{
-                          '&:hover': { color: 'primary.main', textDecoration: 'underline' },
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {kb.name}
-                      </Typography>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {kb.description || 'No description'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {kb.dataSources && kb.dataSources.length > 0 ? (
-                      <Typography variant="body2">{kb.dataSources.length}</Typography>
-                    ) : (
-                      <Typography variant="body2">No data sources</Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {kb.createdAt && (
-                      <Typography variant="body2">
-                        {new Date(kb.createdAt).toLocaleDateString()}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEdit(kb)}
-                      color="primary"
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(kb.id)}
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <TablePagination
-            component="div"
-            count={knowledgeBases?.length || 0}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[5, 10, 25, 50]}
+        <Box sx={{ height: 600, width: '100%' }}>
+          <Box sx={{ py: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <TextField
+              fullWidth
+              placeholder="Search knowledge bases..."
+              variant="outlined"
+              size="small"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </Box>
+          <DataGrid
+            rows={filteredKnowledgeBases}
+            columns={columns}
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10, page: 0 },
+              },
+            }}
+            pageSizeOptions={[5, 10, 25, 50]}
+            disableRowSelectionOnClick
           />
-        </TableContainer>
+        </Box>
       )}
 
       <KnowledgeBaseDialog

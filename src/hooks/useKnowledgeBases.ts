@@ -11,7 +11,6 @@ import {
   QueryKnowledgeBaseCommand,
   QueryKnowledgeBaseOutput,
   SearchKnowledgeBaseOutput,
-  SearchStrategy,
 } from '@wildix/wim-knowledge-base-client'
 
 

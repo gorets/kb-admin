@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   Box,
@@ -9,18 +9,13 @@ import {
   Paper,
   Chip,
   Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   IconButton,
   Grid,
   Stack,
   Collapse,
+  TextField,
 } from '@mui/material'
+import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
@@ -58,8 +53,6 @@ export default function DataSourceDetailPage() {
   const [syncPollingEnabled, setSyncPollingEnabled] = useState(true) // Always fetch initially
   const [currentSyncStatus, setCurrentSyncStatus] = useState<SyncDataSourceStatus | null>(null) // Combined sync status state
   const [lastSyncErrorMessage, setLastSyncErrorMessage] = useState<string | undefined>(undefined)
-  const [docsPage, setDocsPage] = useState(0)
-  const [docsRowsPerPage, setDocsRowsPerPage] = useState(10)
   const [expanded, setExpanded] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedDocumentDetails, setSelectedDocumentDetails] = useState<{
@@ -67,10 +60,21 @@ export default function DataSourceDetailPage() {
     content: string
     chunks: any[]
   }>({ document: null, content: '', chunks: [] })
+  const [searchText, setSearchText] = useState('')
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
   const { data: syncStatusFromPolling } = useSyncStatus(id!, syncPollingEnabled)
+
+  const filteredDocuments = useMemo(() => {
+    if (!documents || !searchText) return documents || []
+
+    const lowerSearch = searchText.toLowerCase()
+    return documents.filter((doc) =>
+      doc.title?.toLowerCase().includes(lowerSearch) ||
+      doc.url?.toLowerCase().includes(lowerSearch)
+    )
+  }, [documents, searchText])
 
   const deleteDocumentMutation = useDeleteDocument()
   const deleteDataSourceMutation = useDeleteDataSource()
@@ -212,19 +216,152 @@ export default function DataSourceDetailPage() {
     }
   }
 
-  const handleDocsChangePage = (_event: unknown, newPage: number) => {
-    setDocsPage(newPage)
-  }
-
-  const handleDocsChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setDocsRowsPerPage(parseInt(event.target.value, 10))
-    setDocsPage(0)
-  }
-
-  // Paginated documents
-  const paginatedDocuments = documents
-    ? documents.slice(docsPage * docsRowsPerPage, docsPage * docsRowsPerPage + docsRowsPerPage)
-    : []
+  const columns: GridColDef[] = [
+    {
+      field: 'title',
+      headerName: 'Title',
+      flex: 3,
+      renderCell: (params) => (
+        <Typography variant="body1" fontWeight="medium">
+          {params.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'preview',
+      headerName: 'Preview',
+      flex: 0.5,
+      sortable: false,
+      renderCell: (params) => (
+        <IconButton
+          size="small"
+          onClick={() => handleGetDocument(params.row)}
+          color="info"
+          title="Get document with chunks"
+        >
+          <VisibilityIcon fontSize="small" />
+        </IconButton>
+      ),
+    },
+    {
+      field: 'url',
+      headerName: 'Open',
+      flex: 0.5,
+      sortable: false,
+      renderCell: (params) =>
+        params.value ? (
+          <Link to={params.value} target="_blank" rel="noopener noreferrer">
+            <IconButton size="small" color="primary">
+              <OpenInNewIcon fontSize="small" />
+            </IconButton>
+          </Link>
+        ) : null,
+    },
+    {
+      field: 'chunksCount',
+      headerName: 'Chunks Count',
+      flex: 0.5,
+      renderCell: (params) =>
+        params.value && params.value > 0 ? (
+          <Typography variant="body2">{params.value}</Typography>
+        ) : null,
+    },
+    {
+      field: 'processingDuration',
+      headerName: 'Processing Duration',
+      flex: 1,
+      renderCell: (params) =>
+        params.value && params.value > 0 ? (
+          <Typography variant="body2">{parseInt(params.value) / 1000} s</Typography>
+        ) : null,
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      flex: 1,
+      renderCell: (params) => {
+        const doc = params.row
+        return doc.errorMessage ? (
+          <Tooltip title={doc.errorMessage} arrow>
+            <Chip
+              label={params.value}
+              size="small"
+              color={
+                params.value === DocumentStatus.PENDING
+                  ? 'primary'
+                  : params.value === DocumentStatus.PROCESSING
+                  ? 'warning'
+                  : params.value === DocumentStatus.COMPLETED
+                  ? 'success'
+                  : 'error'
+              }
+              tabIndex={0}
+            />
+          </Tooltip>
+        ) : (
+          <Chip
+            label={params.value}
+            size="small"
+            color={
+              params.value === DocumentStatus.PENDING
+                ? 'primary'
+                : params.value === DocumentStatus.PROCESSING
+                ? 'warning'
+                : params.value === DocumentStatus.COMPLETED
+                ? 'success'
+                : 'error'
+            }
+          />
+        )
+      },
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <Typography variant="body2">
+            {new Date(params.value).toLocaleDateString()}
+          </Typography>
+        ) : null,
+    },
+    {
+      field: 'updatedAt',
+      headerName: 'Updated',
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <Typography variant="body2">
+            {new Date(params.value).toLocaleDateString()}
+          </Typography>
+        ) : null,
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 1,
+      sortable: false,
+      renderCell: (params) => (
+        <Box>
+          <IconButton
+            size="small"
+            onClick={() => handleEditDocument(params.row)}
+            color="primary"
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleDeleteDocument(params.row.dataSourceId, params.row.id)}
+            color="error"
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ]
 
   if (isLoading) {
     return (
@@ -444,129 +581,29 @@ export default function DataSourceDetailPage() {
             <CircularProgress />
           </Box>
         ) : documents && documents.length > 0 ? (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Title</TableCell>
-                  <TableCell>Preview</TableCell>
-                  <TableCell>Open</TableCell>
-                  <TableCell>Chunks Count</TableCell>
-                  <TableCell>Processing Duration</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Created</TableCell>
-                  <TableCell>Updated</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedDocuments.map((doc) => (
-                  <TableRow key={doc.id} hover>
-                    <TableCell sx={{ width: '30%' }}>
-                      <Typography variant="body1" fontWeight="medium">
-                        {doc.title}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleGetDocument(doc)}
-                        color="info"
-                        title="Get document with chunks"
-                      >
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                      >
-                        {doc.url && <Link to={doc.url} target="_blank" rel="noopener noreferrer">
-                          <IconButton size="small" color="primary">
-                            <OpenInNewIcon fontSize="small" />
-                          </IconButton>
-                        </Link>}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell>
-                      {doc.chunksCount && doc.chunksCount > 0 && (
-                        <Typography variant="body2">
-                          {doc.chunksCount}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {doc.processingDuration && doc.processingDuration > 0 && (
-                        <Typography variant="body2">
-                          {doc.processingDuration}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {doc.errorMessage ? (
-                        <Tooltip title={doc.errorMessage} arrow>
-                          <Chip
-                            label={doc.status}
-                            size="small"
-                            color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
-                            tabIndex={0}
-                          />
-                        </Tooltip>
-                      ) : (
-                        <Chip
-                          label={doc.status}
-                          size="small"
-                          color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
-                        />
-                      )}
-
-                    </TableCell>
-                    <TableCell>
-                      {doc.createdAt && (
-                        <Typography variant="body2">
-                          {new Date(doc.createdAt).toLocaleDateString()}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {doc.updatedAt && (
-                        <Typography variant="body2">
-                          {new Date(doc.updatedAt).toLocaleDateString()}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditDocument(doc)}
-                        color="primary"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteDocument(doc.dataSourceId, doc.id)}
-                        color="error"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <TablePagination
-              component="div"
-              count={documents?.length || 0}
-              page={docsPage}
-              onPageChange={handleDocsChangePage}
-              rowsPerPage={docsRowsPerPage}
-              onRowsPerPageChange={handleDocsChangeRowsPerPage}
-              rowsPerPageOptions={[5, 10, 25, 50]}
+          <Box sx={{ height: 600, width: '100%' }}>
+            <Box sx={{ py: 2, borderBottom: 1, borderColor: 'divider' }}>
+              <TextField
+                fullWidth
+                placeholder="Search documents..."
+                variant="outlined"
+                size="small"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+            </Box>
+            <DataGrid
+              rows={filteredDocuments}
+              columns={columns}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10, page: 0 },
+                },
+              }}
+              pageSizeOptions={[5, 10, 25, 50]}
+              disableRowSelectionOnClick
             />
-          </TableContainer>
+          </Box>
         ) : (
           <Alert severity="info">
             No documents yet. Click "Add Document" to create one.
