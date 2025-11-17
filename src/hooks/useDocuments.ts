@@ -35,6 +35,24 @@ export const useDocument = (dataSourceId: string, documentId: string) => {
   })
 }
 
+export const useGetDocumentWithChunks = () => {
+  return useMutation({
+    mutationFn: async ({ dataSourceId, documentId }: { dataSourceId: string; documentId: string }) => {
+      const response = await kbClient.send(new GetDocumentCommand({
+        dataSourceId,
+        documentId,
+        withContent: true,
+        withChunks: true
+      }));
+      return {
+        document: response.document,
+        content: response.content || '',
+        chunks: response.chunks || []
+      }
+    },
+  })
+}
+
 export const useCreateDocument = () => {
   const queryClient = useQueryClient()
 

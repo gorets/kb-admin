@@ -18,9 +18,7 @@ import {
   TablePagination,
   IconButton,
   Grid,
-  Divider,
   Stack,
-  LinearProgress,
   Collapse,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -32,6 +30,7 @@ import StopIcon from '@mui/icons-material/Stop'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ClearIcon from '@mui/icons-material/Clear'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import {
   useDataSource,
   useDeleteDataSource,
@@ -42,10 +41,11 @@ import {
   useClearDataSource,
   useCloneDataSource,
 } from '../hooks/useDataSources'
-import { useDocuments, useDeleteDocument } from '../hooks/useDocuments'
+import { useDocuments, useDeleteDocument, useGetDocumentWithChunks } from '../hooks/useDocuments'
 import DocumentDialog from '../components/DocumentDialog'
 import DataSourceDialog from '../components/DataSourceDialog'
-import type { Document as DocumentType, DataSource } from '../types'
+import DocumentDetailsDrawer from '../components/DocumentDetailsDrawer'
+import type { Document as DocumentType } from '../types'
 import { DocumentStatus, SyncDataSourceMode, SyncDataSourceStatus } from '@wildix/wim-knowledge-base-client'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
@@ -60,7 +60,13 @@ export default function DataSourceDetailPage() {
   const [lastSyncErrorMessage, setLastSyncErrorMessage] = useState<string | undefined>(undefined)
   const [docsPage, setDocsPage] = useState(0)
   const [docsRowsPerPage, setDocsRowsPerPage] = useState(10)
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [selectedDocumentDetails, setSelectedDocumentDetails] = useState<{
+    document: DocumentType | null
+    content: string
+    chunks: any[]
+  }>({ document: null, content: '', chunks: [] })
 
   const { data: dataSource, isLoading, error } = useDataSource(id!)
   const { data: documents, isLoading: documentsLoading } = useDocuments(id)
@@ -73,6 +79,7 @@ export default function DataSourceDetailPage() {
   const stopSyncMutation = useStopSyncDataSource()
   const clearDataSourceMutation = useClearDataSource()
   const cloneDataSourceMutation = useCloneDataSource()
+  const getDocumentWithChunksMutation = useGetDocumentWithChunks()
 
   // Initialize sync status from dataSource on first load
   useEffect(() => {
@@ -185,6 +192,23 @@ export default function DataSourceDetailPage() {
   const handleDeleteDocument = async (dataSourceId: string, documentId: string) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
       await deleteDocumentMutation.mutateAsync({ dataSourceId, documentId })
+    }
+  }
+
+  const handleGetDocument = async (doc: DocumentType) => {
+    try {
+      const result = await getDocumentWithChunksMutation.mutateAsync({
+        dataSourceId: doc.dataSourceId,
+        documentId: doc.id
+      })
+      setSelectedDocumentDetails({
+        document: result.document || null,
+        content: result.content || '',
+        chunks: result.chunks
+      })
+      setDrawerOpen(true)
+    } catch (error) {
+      console.error('Error fetching document details:', error)
     }
   }
 
@@ -425,7 +449,10 @@ export default function DataSourceDetailPage() {
               <TableHead>
                 <TableRow>
                   <TableCell>Title</TableCell>
-                  <TableCell>Content Preview</TableCell>
+                  <TableCell>Preview</TableCell>
+                  <TableCell>Open</TableCell>
+                  <TableCell>Chunks Count</TableCell>
+                  <TableCell>Processing Duration</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Created</TableCell>
                   <TableCell>Updated</TableCell>
@@ -435,10 +462,20 @@ export default function DataSourceDetailPage() {
               <TableBody>
                 {paginatedDocuments.map((doc) => (
                   <TableRow key={doc.id} hover>
-                    <TableCell sx={{ width: '50%' }}>
+                    <TableCell sx={{ width: '30%' }}>
                       <Typography variant="body1" fontWeight="medium">
                         {doc.title}
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleGetDocument(doc)}
+                        color="info"
+                        title="Get document with chunks"
+                      >
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
                     </TableCell>
                     <TableCell>
                       <Typography
@@ -451,6 +488,21 @@ export default function DataSourceDetailPage() {
                           </IconButton>
                         </Link>}
                       </Typography>
+                    </TableCell>
+
+                    <TableCell>
+                      {doc.chunksCount && doc.chunksCount > 0 && (
+                        <Typography variant="body2">
+                          {doc.chunksCount}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {doc.processingDuration && doc.processingDuration > 0 && (
+                        <Typography variant="body2">
+                          {doc.processingDuration}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       {doc.errorMessage ? (
@@ -469,7 +521,7 @@ export default function DataSourceDetailPage() {
                           color={doc.status === DocumentStatus.PENDING ? 'primary' : doc.status === DocumentStatus.PROCESSING ? 'warning' : doc.status === DocumentStatus.COMPLETED ? 'success' : 'error'}
                         />
                       )}
-                      
+
                     </TableCell>
                     <TableCell>
                       {doc.createdAt && (
@@ -535,6 +587,16 @@ export default function DataSourceDetailPage() {
         onSubmit={handleUpdateDataSource}
         dataSource={dataSource}
         loading={updateDataSourceMutation.isPending}
+      />
+
+      <DocumentDetailsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        document={selectedDocumentDetails.document}
+        content={selectedDocumentDetails.content}
+        chunks={selectedDocumentDetails.chunks}
+        loading={getDocumentWithChunksMutation.isPending}
+        error={getDocumentWithChunksMutation.error?.message || null}
       />
     </Box>
   )
