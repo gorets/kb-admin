@@ -15,6 +15,7 @@ import {
   GetSyncStatusCommand,
   CleanDataSourceCommand,
   CloneDataSourceCommand,
+  DescribeDataSourceCommand,
   SyncDataSourceMode,
   GetSyncStatusOutput,
 } from '@wildix/wim-knowledge-base-client'
@@ -165,6 +166,70 @@ export const useCloneDataSource = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataSources'] })
+    },
+  })
+}
+
+// Describe data source - get spaces, pages, etc.
+export interface DescribeSpacesParams {
+  confluence: {
+    spaces: string
+  }
+}
+
+export interface DescribePagesParams {
+  confluence: {
+    pages: {
+      spaceId: string
+      parentId: string | null
+    }
+  }
+}
+
+export type DescribeParams = DescribeSpacesParams | DescribePagesParams
+
+export interface Space {
+  id: string
+  key: string
+  name: string
+}
+
+export interface Page {
+  id: string
+  title: string
+  parentId?: string
+  children?: Page[]
+}
+
+export interface DescribeSpacesResponse {
+  confluence: {
+    spaces: Space[]
+  }
+}
+
+export interface DescribePagesResponse {
+  confluence: {
+    pages: Page[]
+  }
+}
+
+export const useDescribeDataSource = () => {
+  return useMutation({
+    mutationFn: async ({
+      dataSourceId,
+      parameters,
+    }: {
+      dataSourceId: string
+      parameters: DescribeParams
+    }) => {
+      const response = await kbClient.send(new DescribeDataSourceCommand({
+        dataSourceId,
+        parameters: parameters as any, // SDK expects Document type
+      }))
+
+      // Response structure: { info: Document }
+      // The info contains the actual data (spaces, pages, etc.)
+      return response.info as any
     },
   })
 }

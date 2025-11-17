@@ -14,11 +14,13 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.16",
     "@mui/material": "^5.14.17",
+    "@nangohq/frontend": "^0.69.13",
     "@tanstack/react-query": "^5.8.4",
     "@wildix/wim-knowledge-base-client": "^0.0.16",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.18.0"
+    "react-router-dom": "^6.18.0",
+    "selectable-tree-view": "^1.0.10"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",

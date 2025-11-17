@@ -29,11 +29,15 @@ import {
   useDeleteDataSource,
 } from '../hooks/useDataSources'
 import DataSourceDialog from '../components/DataSourceDialog'
+import DataSourceTypeDialog from '../components/DataSourceTypeDialog'
 import type { DataSource } from '../types'
+import { DataSourceType } from '@wildix/wim-knowledge-base-client'
 
 export default function DataSourcesPage() {
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedDS, setSelectedDS] = useState<DataSource | null>(null)
+  const [selectedType, setSelectedType] = useState<DataSourceType | undefined>(undefined)
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const navigate = useNavigate()
@@ -45,11 +49,18 @@ export default function DataSourcesPage() {
 
   const handleCreate = () => {
     setSelectedDS(null)
+    setSelectedType(undefined)
+    setTypeDialogOpen(true)
+  }
+
+  const handleTypeSelect = (type: DataSourceType) => {
+    setSelectedType(type)
     setDialogOpen(true)
   }
 
   const handleEdit = (ds: DataSource) => {
     setSelectedDS(ds)
+    setSelectedType(undefined)
     setDialogOpen(true)
   }
 
@@ -71,9 +82,15 @@ export default function DataSourcesPage() {
         await createMutation.mutateAsync(data)
       }
       setDialogOpen(false)
+      setSelectedType(undefined)
     } catch (error) {
       console.error('Error saving data source:', error)
     }
+  }
+
+  const handleDialogClose = () => {
+    setDialogOpen(false)
+    setSelectedType(undefined)
   }
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -224,12 +241,19 @@ export default function DataSourcesPage() {
         </TableContainer>
       )}
 
+      <DataSourceTypeDialog
+        open={typeDialogOpen}
+        onClose={() => setTypeDialogOpen(false)}
+        onSelect={handleTypeSelect}
+      />
+
       <DataSourceDialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={handleDialogClose}
         onSubmit={handleSubmit}
         dataSource={selectedDS}
         loading={createMutation.isPending || updateMutation.isPending}
+        preselectedType={selectedType}
       />
     </Box>
   )
