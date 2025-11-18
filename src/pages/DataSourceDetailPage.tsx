@@ -222,7 +222,7 @@ export default function DataSourceDetailPage() {
       headerName: 'Title',
       flex: 3,
       renderCell: (params) => (
-        <Typography variant="body1" fontWeight="medium">
+        <Typography variant="body1" fontWeight="medium" marginTop="14px">
           {params.value}
         </Typography>
       ),

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   Box,
   Button,
@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Alert,
   TextField,
+  Link,
 } from '@mui/material'
 import { DataGrid, GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
@@ -22,10 +23,12 @@ import {
 import KnowledgeBaseDialog from '../components/KnowledgeBaseDialog'
 import type { KnowledgeBase } from '../types'
 
+
 export default function KnowledgeBasesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedKB, setSelectedKB] = useState<KnowledgeBase | null>(null)
   const [searchText, setSearchText] = useState('')
+  const navigate = useNavigate();
 
   const { data: knowledgeBases, isLoading, error } = useKnowledgeBases()
 
@@ -71,26 +74,22 @@ export default function KnowledgeBasesPage() {
     }
   }
 
+
+  const handleViewDetails = (id: string) => {
+    navigate(`/knowledge-bases/${id}`)
+  }
+
   const columns: GridColDef[] = [
     {
       field: 'name',
       headerName: 'Name',
       flex: 1,
       renderCell: (params) => (
-        <Link
-          to={`/knowledge-bases/${params.row.id}`}
-          style={{ textDecoration: 'none', color: 'inherit' }}
-        >
-          <Typography
-            variant="body1"
-            fontWeight="medium"
-            sx={{
-              '&:hover': { color: 'primary.main', textDecoration: 'underline' },
-              cursor: 'pointer',
-            }}
+        <Link component="button" variant="body1" 
+          onClick={() => handleViewDetails(params.row.id)} 
+          sx={{ fontWeight: 'medium', textAlign: 'left' }}
           >
             {params.value}
-          </Typography>
         </Link>
       ),
     },
