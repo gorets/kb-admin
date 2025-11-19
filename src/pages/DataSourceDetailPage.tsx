@@ -232,16 +232,17 @@ export default function DataSourceDetailPage() {
       headerName: 'Preview',
       flex: 0.5,
       sortable: false,
-      renderCell: (params) => (
-        <IconButton
-          size="small"
-          onClick={() => handleGetDocument(params.row)}
-          color="info"
-          title="Get document with chunks"
-        >
-          <VisibilityIcon fontSize="small" />
-        </IconButton>
-      ),
+      renderCell: (params) =>
+        params.row.status === DocumentStatus.COMPLETED && (
+          <IconButton
+            size="small"
+            onClick={() => handleGetDocument(params.row)}
+            color="info"
+            title="Get document with chunks"
+          >
+            <VisibilityIcon fontSize="small" />
+          </IconButton>
+        ),
     },
     {
       field: 'url',
@@ -522,7 +523,7 @@ export default function DataSourceDetailPage() {
           {lastSyncErrorMessage && (
             <Grid item xs={12}>
               <Alert severity="error" sx={{ mt: 1 }}>
-                {lastSyncErrorMessage}
+                Last Sync Error: {lastSyncErrorMessage}
               </Alert>
             </Grid>
           )}

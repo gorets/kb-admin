@@ -187,7 +187,7 @@ const KnowledgeBaseDetailPage = () => {
   // Form state
   const [query, setQuery] = useState('')
   const [topK, setTopK] = useState(10)
-  const [threshold, setThreshold] = useState(0.5)
+  const [threshold, setThreshold] = useState(0.4)
   const [maxOutputTokens, setMaxOutputTokens] = useState(1000)
   const [strategy, setStrategy] = useState<'hybrid' | 'vector' | 'bm25'>('hybrid')
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
