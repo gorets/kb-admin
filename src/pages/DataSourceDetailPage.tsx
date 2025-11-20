@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Box,
   Button,
@@ -40,13 +41,15 @@ import { useDocuments, useDeleteDocument, useGetDocumentWithChunks } from '../ho
 import DocumentDialog from '../components/DocumentDialog'
 import DataSourceDialog from '../components/DataSourceDialog'
 import DocumentDetailsDrawer from '../components/DocumentDetailsDrawer'
+import FileUpload from '../components/FileUpload'
 import type { Document as DocumentType } from '../types'
-import { DocumentStatus, SyncDataSourceMode, SyncDataSourceStatus } from '@wildix/wim-knowledge-base-client'
+import { DocumentStatus, SyncDataSourceMode, SyncDataSourceStatus, DataSourceType } from '@wildix/wim-knowledge-base-client'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 
 export default function DataSourceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(null)
   const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false)
@@ -288,13 +291,17 @@ export default function DataSourceDetailPage() {
               label={params.value}
               size="small"
               color={
-                params.value === DocumentStatus.PENDING
+                params.value === DocumentStatus.DRAFT
+                  ? 'info'
+                  : params.value === DocumentStatus.FAILED
+                  ? 'error'
+                  : params.value === DocumentStatus.PENDING
                   ? 'primary'
                   : params.value === DocumentStatus.PROCESSING
                   ? 'warning'
                   : params.value === DocumentStatus.COMPLETED
                   ? 'success'
-                  : 'error'
+                  : 'secondary'
               }
               tabIndex={0}
             />
@@ -304,13 +311,15 @@ export default function DataSourceDetailPage() {
             label={params.value}
             size="small"
             color={
-              params.value === DocumentStatus.PENDING
+                params.value === DocumentStatus.DRAFT
+                  ? 'info'
+                : params.value === DocumentStatus.PENDING
                 ? 'primary'
                 : params.value === DocumentStatus.PROCESSING
                 ? 'warning'
                 : params.value === DocumentStatus.COMPLETED
                 ? 'success'
-                : 'error'
+                : 'secondary'
             }
           />
         )
@@ -530,39 +539,70 @@ export default function DataSourceDetailPage() {
         </Grid>
       </Paper>
 
-      {/* Sync Controls */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Sync Controls
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          <Button
-            variant="contained"
-            startIcon={<PlayArrowIcon />}
-            onClick={() => handleStartSync(SyncDataSourceMode.FULL)}
-            disabled={isSyncRunning || startSyncMutation.isPending}
-          >
-            Start Full Sync
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<RefreshIcon />}
-            onClick={() => handleStartSync(SyncDataSourceMode.INCREMENTAL)}
-            disabled={isSyncRunning || startSyncMutation.isPending}
-          >
-            Start Incremental Sync
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<StopIcon />}
-            onClick={handleStopSync}
-            disabled={!isSyncRunning || stopSyncMutation.isPending}
-          >
-            Stop Sync
-          </Button>
-        </Stack>
-      </Paper>
+      {/* Sync Controls - Only show for non-Files data sources */}
+      {dataSource.type !== DataSourceType.FILES && (
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Sync Controls
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Button
+              variant="contained"
+              startIcon={<PlayArrowIcon />}
+              onClick={() => handleStartSync(SyncDataSourceMode.FULL)}
+              disabled={isSyncRunning || startSyncMutation.isPending}
+            >
+              Start Full Sync
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<RefreshIcon />}
+              onClick={() => handleStartSync(SyncDataSourceMode.INCREMENTAL)}
+              disabled={isSyncRunning || startSyncMutation.isPending}
+            >
+              Start Incremental Sync
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<StopIcon />}
+              onClick={handleStopSync}
+              disabled={!isSyncRunning || stopSyncMutation.isPending}
+            >
+              Stop Sync
+            </Button>
+          </Stack>
+        </Paper>
+      )}
+
+      {/* File Upload - Only show for Files data sources */}
+      {dataSource.type === DataSourceType.FILES && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Upload Files
+          </Typography>
+          <FileUpload
+            dataSourceId={id!}
+            onUploadSuccess={() => {
+              // Refresh documents list after successful upload
+              queryClient.invalidateQueries({ queryKey: ['documents', id] })
+            }}
+            maxFiles={10}
+            acceptedFormats={
+              dataSource.config?.files?.allowedExtensions || [
+                'pdf',
+                'docx',
+                'doc',
+                'xlsx',
+                'xls',
+                'txt',
+                'md',
+                'html',
+              ]
+            }
+          />
+        </Paper>
+      )}
 
       {/* Documents Section */}
       <Box>

@@ -229,7 +229,7 @@ export const useDescribeDataSource = () => {
 
       // Response structure: { info: Document }
       // The info contains the actual data (spaces, pages, etc.)
-      return response.info as any
+      return response.result as any
     },
   })
 }

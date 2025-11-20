@@ -340,7 +340,7 @@ export default function ConfluenceSteppedForm({
     if (!dataSourceId || !selectedSpace) return
 
     // For root nodes, we already loaded them in loadPages
-    if (parentId === null) return
+    if (parentId === null || parentId === '') return
 
     try {
       const response = await describeMutation.mutateAsync({
