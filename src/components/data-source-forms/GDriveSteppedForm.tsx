@@ -142,18 +142,20 @@ export default function GDriveSteppedForm({
         dataSourceId: tempDataSourceId,
         parameters: {
           gdrive: {
-            session: {},
+            session: {
+              userId: 'admin',
+            },
           },
         } as any,
       })
 
-      if (!sessionResponse.gdrive?.sessionToken) {
+      if (!sessionResponse.gdrive?.sessionId) {
         throw new Error('Failed to get session token')
       }
 
       // Step 3: Perform OAuth via Nango
       const integrationId = import.meta.env.VITE_GDRIVE_INTEGRATION_ID || 'kb-google-drive'
-      const authResult = await authenticate(integrationId, sessionResponse.gdrive.sessionToken)
+      const authResult = await authenticate(integrationId, sessionResponse.gdrive.sessionId)
 
       // Step 4: Save connection ID
       onChange(['gdrive', 'nangoConnectionId'], authResult.connectionId)
