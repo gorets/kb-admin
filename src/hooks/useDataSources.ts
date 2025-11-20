@@ -18,6 +18,8 @@ import {
   DescribeDataSourceCommand,
   SyncDataSourceMode,
   GetSyncStatusOutput,
+  DescribeDataSourceParameters,
+  DescribeDataSourceResult,
 } from '@wildix/wim-knowledge-base-client'
 
 export const useDataSources = () => {
@@ -171,47 +173,48 @@ export const useCloneDataSource = () => {
 }
 
 // Describe data source - get spaces, pages, etc.
-export interface DescribeSpacesParams {
-  confluence: {
-    spaces: string
-  }
-}
+// export interface DescribeSpacesParams {
+//   confluence: {
+//     spaces: string
+//   }
+// }
 
-export interface DescribePagesParams {
-  confluence: {
-    pages: {
-      spaceId: string
-      parentId: string | null
-    }
-  }
-}
+// export interface DescribePagesParams {
+//   confluence: {
+//     pages: {
+//       spaceId: string
+//       parentId: string | null
+//       enabled: string[] | undefined
+//     }
+//   }
+// }
 
-export type DescribeParams = DescribeSpacesParams | DescribePagesParams
+// export type DescribeParams = DescribeSpacesParams | DescribePagesParams
 
-export interface Space {
-  id: string
-  key: string
-  name: string
-}
+// export interface Space {
+//   id: string
+//   key: string
+//   name: string
+// }
 
-export interface Page {
-  id: string
-  title: string
-  parentId?: string
-  children?: Page[]
-}
+// export interface Page {
+//   id: string
+//   title: string
+//   parentId?: string
+//   children?: Page[]
+// }
 
-export interface DescribeSpacesResponse {
-  confluence: {
-    spaces: Space[]
-  }
-}
+// export interface DescribeSpacesResponse {
+//   confluence: {
+//     spaces: Space[]
+//   }
+// }
 
-export interface DescribePagesResponse {
-  confluence: {
-    pages: Page[]
-  }
-}
+// export interface DescribePagesResponse {
+//   confluence: {
+//     pages: Page[]
+//   }
+// }
 
 export const useDescribeDataSource = () => {
   return useMutation({
@@ -220,16 +223,16 @@ export const useDescribeDataSource = () => {
       parameters,
     }: {
       dataSourceId: string
-      parameters: DescribeParams
+      parameters: DescribeDataSourceParameters
     }) => {
       const response = await kbClient.send(new DescribeDataSourceCommand({
         dataSourceId,
-        parameters: parameters as any, // SDK expects Document type
+        parameters: parameters as unknown as DescribeDataSourceParameters, // SDK expects Document type
       }))
 
       // Response structure: { info: Document }
       // The info contains the actual data (spaces, pages, etc.)
-      return response.result as any
+      return response.result as DescribeDataSourceResult
     },
   })
 }

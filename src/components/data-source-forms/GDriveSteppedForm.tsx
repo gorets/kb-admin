@@ -22,13 +22,8 @@ import {
   useDescribeDataSource,
 } from '../../hooks/useDataSources'
 import { useNangoAuth } from '../../hooks/useNangoAuth'
-import { DataSourceType } from '@wildix/wim-knowledge-base-client'
+import { DataSourceType, DescribeDataSourceGDriveFolderResult } from '@wildix/wim-knowledge-base-client'
 
-interface FlatFolder {
-  id: string
-  parentId: string | null
-  name: string
-}
 
 interface GDriveConfig {
   gdrive?: {
@@ -77,7 +72,7 @@ export default function GDriveSteppedForm({
   const [isValidating, setIsValidating] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [dataSourceId, setDataSourceId] = useState<string | undefined>(initialDataSourceId)
-  const [folders, setFolders] = useState<FlatFolder[]>([])
+  const [folders, setFolders] = useState<DescribeDataSourceGDriveFolderResult[]>([])
   const [isLoadingFolders, setIsLoadingFolders] = useState(false)
   const [authSuccess, setAuthSuccess] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
@@ -197,7 +192,7 @@ export default function GDriveSteppedForm({
             config: {
               gdrive: {
                 nangoConnectionId: config.gdrive.nangoConnectionId,
-                folders: { enabled: [], disabled: [] },
+                folders: config.gdrive?.folders || { enabled: [], disabled: [] },
               },
             },
             enabled: true, // Enable now that auth is complete
@@ -230,20 +225,14 @@ export default function GDriveSteppedForm({
           gdrive: {
             folders: {
               parentId: parentId || 'root',
+              enabled: config.gdrive?.folders?.enabled || [],
             },
           },
         } as any,
       })
 
-      if (response.gdrive.folders) {
-        // Convert folders to flat format with parentId
-        const flatFolders: FlatFolder[] = response.gdrive.folders.map((folder: any) => ({
-          id: folder.id,
-          name: folder.name,
-          parentId: parentId,
-        }))
-
-        setUniqueFolders(flatFolders)
+      if (response.gdrive?.folders) {
+        setUniqueFolders(response.gdrive.folders)
       }
     } catch (error: any) {
       console.error('Failed to load folders:', error)
@@ -254,7 +243,7 @@ export default function GDriveSteppedForm({
   }
 
   // Helper function to add folders to flat array without duplicates
-  const setUniqueFolders = (newFolders: FlatFolder[]) => {
+  const setUniqueFolders = (newFolders: DescribeDataSourceGDriveFolderResult[]) => {
     setFolders((prevFolders) => {
       // Create a map of existing folders by ID
       const folderMap = new Map(prevFolders.map((f) => [f.id, f]))
@@ -274,7 +263,7 @@ export default function GDriveSteppedForm({
     if (!dataSourceId) return
 
     // For root nodes, we already loaded them in loadFolders
-    if (parentId === null) return
+    if (parentId === null || parentId === '') return
 
     try {
       const response = await describeMutation.mutateAsync({
@@ -282,18 +271,18 @@ export default function GDriveSteppedForm({
         parameters: {
           gdrive: {
             folders: {
-            parentId,
+              parentId,
             },
           },
         } as any,
       })
 
-      if (response.gdrive.folders) {
+      if (response.gdrive?.folders) {
         // Convert folders to flat format with parentId
-        const flatFolders: FlatFolder[] = response.gdrive.folders.map((folder: any) => ({
+        const flatFolders: DescribeDataSourceGDriveFolderResult[] = response.gdrive.folders.map((folder: DescribeDataSourceGDriveFolderResult) => ({
           id: folder.id,
           name: folder.name,
-          parentId: parentId,
+          parentId,
         }))
 
         setUniqueFolders(flatFolders)

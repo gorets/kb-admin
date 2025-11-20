@@ -24,11 +24,8 @@ import {
   useCreateDataSource,
   useUpdateDataSource,
   useDescribeDataSource,
-  type Space,
-  type DescribeSpacesResponse,
-  type DescribePagesResponse,
 } from '../../hooks/useDataSources'
-import { DataSourceType } from '@wildix/wim-knowledge-base-client'
+import { DataSourceType, DescribeDataSourceConfluenceSpaceResult, DescribeDataSourceResult } from '@wildix/wim-knowledge-base-client'
 
 interface FlatPage {
   id: string
@@ -88,7 +85,7 @@ export default function ConfluenceSteppedForm({
   const [isValidating, setIsValidating] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [dataSourceId, setDataSourceId] = useState<string | undefined>(initialDataSourceId)
-  const [spaces, setSpaces] = useState<Space[]>([])
+  const [spaces, setSpaces] = useState<DescribeDataSourceConfluenceSpaceResult[]>([])
   const [selectedSpace, setSelectedSpace] = useState<string>(config.confluence?.spaceId || '')
   const [isLoadingSpaces, setIsLoadingSpaces] = useState(false)
   const [pages, setPages] = useState<FlatPage[]>([])
@@ -195,9 +192,9 @@ export default function ConfluenceSteppedForm({
             spaces: true as any,
           },
         },
-      }) as DescribeSpacesResponse
+      }) as DescribeDataSourceResult
 
-      if (response.confluence.spaces) {
+      if (response.confluence?.spaces) {
         setSpaces(response.confluence.spaces)
       }
     } catch (error: any) {
@@ -275,7 +272,7 @@ export default function ConfluenceSteppedForm({
 
       // Load pages for selected space
       if (dataSourceId) {
-        await loadPages(dataSourceId, selectedSpace)
+        await loadPages(dataSourceId, selectedSpace, config.confluence?.pages?.enabled)
       }
 
       setActiveStep(2)
@@ -286,7 +283,7 @@ export default function ConfluenceSteppedForm({
   }
 
   // Load pages from API
-  const loadPages = async (dsId: string, spaceId: string) => {
+  const loadPages = async (dsId: string, spaceId: string, parentPages: string[] | undefined = undefined) => {
     setIsLoadingPages(true)
     try {
       const response = await describeMutation.mutateAsync({
@@ -295,18 +292,19 @@ export default function ConfluenceSteppedForm({
           confluence: {
             pages: {
               spaceId,
-              parentId: null,
+              parentId: undefined as string | undefined,
+              enabled: parentPages,
             },
           },
         },
-      }) as DescribePagesResponse
+      }) as DescribeDataSourceResult
 
-      if (response.confluence.pages) {
+      if (response.confluence?.pages) {
         // Convert pages to flat format with parentId
         const flatPages: FlatPage[] = response.confluence.pages.map((page) => ({
           id: page.id,
           title: page.title,
-          parentId: null, // Root pages have no parent
+          parentId: page.parentId ? page.parentId : null, // Root pages have no parent
         }))
 
         setUniquePages(flatPages)
@@ -350,12 +348,13 @@ export default function ConfluenceSteppedForm({
             pages: {
               spaceId: selectedSpace,
               parentId,
+              enabled: undefined
             },
           },
         },
-      }) as DescribePagesResponse
+      }) as DescribeDataSourceResult
 
-      if (response.confluence.pages) {
+      if (response.confluence?.pages) {
         // Convert pages to flat format with parentId
         const flatPages: FlatPage[] = response.confluence.pages.map((page) => ({
           id: page.id,
