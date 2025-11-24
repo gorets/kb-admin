@@ -24,6 +24,11 @@ import {
 import { useNangoAuth } from '../../hooks/useNangoAuth'
 import { DataSourceType, DescribeDataSourceGDriveFolderResult } from '@wildix/wim-knowledge-base-client'
 
+interface FlatFolder {
+  id: string
+  name: string
+  parentId: string | null
+}
 
 interface GDriveConfig {
   gdrive?: {
@@ -72,7 +77,7 @@ export default function GDriveSteppedForm({
   const [isValidating, setIsValidating] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [dataSourceId, setDataSourceId] = useState<string | undefined>(initialDataSourceId)
-  const [folders, setFolders] = useState<DescribeDataSourceGDriveFolderResult[]>([])
+  const [folders, setFolders] = useState<FlatFolder[]>([])
   const [isLoadingFolders, setIsLoadingFolders] = useState(false)
   const [authSuccess, setAuthSuccess] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
@@ -232,7 +237,7 @@ export default function GDriveSteppedForm({
       })
 
       if (response.gdrive?.folders) {
-        setUniqueFolders(response.gdrive.folders)
+        setUniqueFolders(response.gdrive.folders, parentId === 'root' ? null : parentId)
       }
     } catch (error: any) {
       console.error('Failed to load folders:', error)
@@ -243,14 +248,19 @@ export default function GDriveSteppedForm({
   }
 
   // Helper function to add folders to flat array without duplicates
-  const setUniqueFolders = (newFolders: DescribeDataSourceGDriveFolderResult[]) => {
+  const setUniqueFolders = (newFolders: DescribeDataSourceGDriveFolderResult[], parentId: string | null = null) => {
     setFolders((prevFolders) => {
       // Create a map of existing folders by ID
       const folderMap = new Map(prevFolders.map((f) => [f.id, f]))
 
-      // Update or add folders
+      // Update or add folders - ensure parentId is preserved correctly
       for (const folder of newFolders) {
-        folderMap.set(folder.id, folder)
+        const flatFolder: FlatFolder = {
+          id: folder.id,
+          name: folder.name,
+          parentId: parentId // Use the parentId from loading context
+        }
+        folderMap.set(folder.id, flatFolder)
       }
 
       // Convert back to array
@@ -278,14 +288,7 @@ export default function GDriveSteppedForm({
       })
 
       if (response.gdrive?.folders) {
-        // Convert folders to flat format with parentId
-        const flatFolders: DescribeDataSourceGDriveFolderResult[] = response.gdrive.folders.map((folder: DescribeDataSourceGDriveFolderResult) => ({
-          id: folder.id,
-          name: folder.name,
-          parentId,
-        }))
-
-        setUniqueFolders(flatFolders)
+        setUniqueFolders(response.gdrive.folders, parentId)
       }
     } catch (error: any) {
       console.error('Failed to load child folders:', error)

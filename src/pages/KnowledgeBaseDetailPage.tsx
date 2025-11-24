@@ -190,6 +190,7 @@ const KnowledgeBaseDetailPage = () => {
   const [threshold, setThreshold] = useState(0.4)
   const [maxOutputTokens, setMaxOutputTokens] = useState(1000)
   const [strategy, setStrategy] = useState<'hybrid' | 'vector' | 'bm25'>('hybrid')
+  const [useQueryOptimization, setUseQueryOptimization] = useState<boolean>(true)
   const [expandedResults, setExpandedResults] = useState<Record<string, boolean>>({})
 
   if (isLoading) {
@@ -253,6 +254,7 @@ const KnowledgeBaseDetailPage = () => {
       topK,
       threshold,
       strategy,
+      useQueryOptimization,
     }
 
     if (activeTab === 'ai-answer') {
@@ -491,6 +493,17 @@ const KnowledgeBaseDetailPage = () => {
                   <MenuItem value="hybrid">HYBRID</MenuItem>
                   <MenuItem value="vector">VECTOR</MenuItem>
                   <MenuItem value="bm25">BM25</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel>Query Optimization</InputLabel>
+                <Select
+                  value={useQueryOptimization}
+                  label="Query Optimization"
+                  onChange={(e) => setUseQueryOptimization(e.target.value as boolean)}
+                >
+                  <MenuItem value={true as any}>Enabled</MenuItem>
+                  <MenuItem value={false as any}>Disabled</MenuItem>
                 </Select>
               </FormControl>
             </Box>

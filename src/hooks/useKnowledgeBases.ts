@@ -96,6 +96,7 @@ export const useSearchKnowledgeBase = () => {
       topK?: number
       threshold?: number
       strategy?: 'hybrid' | 'vector' | 'bm25'
+      useQueryOptimization?: boolean
     }) => {
       const response = await kbClient.send(new SearchKnowledgeBaseCommand({
         knowledgeBaseId: params.knowledgeBaseId,
@@ -104,6 +105,8 @@ export const useSearchKnowledgeBase = () => {
           topK: params.topK,
           threshold: params.threshold,
           searchStrategy: params.strategy,
+          useQueryOptimization: params.useQueryOptimization,
+          extendMetadata: true,
         },
       }))
       return response as SearchKnowledgeBaseOutput
@@ -120,6 +123,7 @@ export const useQueryKnowledgeBase = () => {
       threshold?: number
       maxOutputTokens?: number
       strategy?: 'hybrid' | 'vector' | 'bm25'
+      useQueryOptimization?: boolean
     }) => {
       const response = await kbClient.send(new QueryKnowledgeBaseCommand({
         knowledgeBaseId: params.knowledgeBaseId,
@@ -128,6 +132,8 @@ export const useQueryKnowledgeBase = () => {
           topK: params.topK,
           threshold: params.threshold,
           searchStrategy: params.strategy,
+          useQueryOptimization: params.useQueryOptimization,
+          extendMetadata: true,
         },
         llmConfig: {
           provider: 'openai',
